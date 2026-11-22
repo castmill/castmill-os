@@ -128,6 +128,7 @@ git tag -s v0.1.0 -m "Castmill OS 0.1.0" && git push origin v0.1.0   # release.y
 | [11](docs/specs/11-roadmap.md) | Roadmap |
 | [Device API](docs/device-api.md) | Agent ↔ Castmill backend protocol (draft v1) |
 | [Status](docs/implementation-status.md) | What is implemented, per requirement |
+| [Testing](docs/testing.md) | Trying a test release: VM, hardware, checklist |
 
 Architecture decisions are recorded in [`docs/adr`](docs/adr). Day-to-day development is described in the [development guide](docs/development.md).
 
