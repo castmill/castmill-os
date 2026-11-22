@@ -1,0 +1,94 @@
+#!/bin/sh
+# castmill-data-setup: prepare the data partition before it is mounted.
+#
+#   1. factory reset when requested (flag on /data or /boot)   -> REL-007
+#   2. grow the partition to the end of the disk (first boot)
+#   3. check the filesystem; recreate it when it can't be repaired,
+#      keeping the device identity when possible                -> spec 05, layer 8
+#   4. grow the filesystem
+#
+# Runs as root before data.mount. Never touches the rootfs slots.
+set -u
+
+DEV="/dev/disk/by-partuuid/@UUID_DATA@"
+TMP=/run/castmill-data-setup
+log() { echo "castmill-data-setup: $*"; }
+
+for _ in $(seq 1 50); do [ -b "$DEV" ] && break; sleep 0.1; done
+[ -b "$DEV" ] || { log "data partition $DEV not found"; exit 1; }
+
+REAL="$(readlink -f "$DEV")"
+NAME="$(basename "$REAL")"
+PARTN="$(cat "/sys/class/block/$NAME/partition")"
+DISK="/dev/$(basename "$(readlink -f "/sys/class/block/$NAME/..")")"
+mkdir -p "$TMP"
+
+reset=0
+if [ -e /boot/factory-reset ]; then
+    log "factory reset requested on the boot partition"
+    reset=1
+    rm -f /boot/factory-reset
+fi
+mkdir -p "$TMP/mnt"
+is_ext4() { blkid -p -s TYPE -o value "$DEV" 2>/dev/null | grep -qx ext4; }
+# "noload": don't replay the journal while just peeking.
+if is_ext4 && mount -o ro,noload "$DEV" "$TMP/mnt" 2>/dev/null; then
+    [ -e "$TMP/mnt/castmill/state/factory-reset" ] && { log "factory reset requested by castmill-agent"; reset=1; }
+    umount "$TMP/mnt"
+fi
+
+# Grow the partition to the end of the disk (images are smaller than disks).
+size=$(cat "/sys/class/block/$NAME/size")
+start=$(cat "/sys/class/block/$NAME/start")
+disksize=$(cat "/sys/class/block/$(basename "$DISK")/size")
+if [ $((start + size)) -lt $((disksize - 2048 - 34)) ]; then
+    log "growing partition $PARTN on $DISK"
+    sfdisk --relocate gpt-bak-std "$DISK" >/dev/null 2>&1 || true
+    if echo ", +" | sfdisk --no-reread --no-tell-kernel -q -N "$PARTN" "$DISK"; then
+        partx -u -n "$PARTN" "$DISK" || log "partx failed; the new size applies after reboot"
+    else
+        log "could not grow the partition"
+    fi
+fi
+
+mkfs() {
+    log "creating a new data filesystem"
+    mkfs.ext4 -q -F -L data -E lazy_itable_init=1,lazy_journal_init=1 "$DEV"
+}
+
+if [ "$reset" = 1 ]; then
+    mkfs
+    exit $?
+fi
+
+if ! is_ext4; then
+    mkfs
+    exit $?
+fi
+
+e2fsck -p "$DEV"
+rc=$?
+if [ $rc -ge 4 ]; then
+    log "filesystem damaged beyond automatic repair (e2fsck $rc)"
+    e2fsck -y "$DEV"
+    rc=$?
+    if [ $rc -ge 4 ]; then
+        # Last resort: keep the identity (no re-enrollment needed), wipe the rest.
+        mkdir -p "$TMP/identity"
+        if mount -o ro,noload "$DEV" "$TMP/mnt" 2>/dev/null; then
+            cp -a "$TMP/mnt/castmill/identity/." "$TMP/identity/" 2>/dev/null
+            umount "$TMP/mnt"
+        fi
+        mkfs || exit 1
+        if [ -n "$(ls -A "$TMP/identity" 2>/dev/null)" ]; then
+            mount "$DEV" "$TMP/mnt" && mkdir -p "$TMP/mnt/castmill/identity" &&
+                cp -a "$TMP/identity/." "$TMP/mnt/castmill/identity/" && log "device identity restored"
+            umount "$TMP/mnt" 2>/dev/null
+        fi
+        rm -rf "$TMP/identity"
+        echo "$(date -u +%FT%TZ) data filesystem recreated (e2fsck $rc)" > "$TMP/recreated"
+    fi
+fi
+
+resize2fs "$DEV" >/dev/null 2>&1 || log "resize2fs failed"
+exit 0

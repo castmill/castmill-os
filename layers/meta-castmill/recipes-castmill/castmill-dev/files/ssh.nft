@@ -1,0 +1,4 @@
+# Development images only: allow SSH (spec 04 "Development vs production").
+tcp dport 22 accept
+icmp type echo-request accept
+icmpv6 type echo-request accept

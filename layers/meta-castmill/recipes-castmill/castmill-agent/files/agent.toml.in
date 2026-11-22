@@ -1,0 +1,28 @@
+# castmill-agent configuration (generated at build time; read-only).
+# Runtime state and configuration from Castmill live under /data/castmill.
+
+[backend]
+url = "@BACKEND_URL@"
+# Pinned backend CA (empty: system roots).
+ca_file = "@BACKEND_CA@"
+# castmill.conf may override the backend (development images only).
+allow_override = @DEV@
+
+[device]
+machine = "@MACHINE@"
+compatible = "@COMPATIBLE@"
+dev_image = @DEV@
+
+[intervals]
+desired = "15m"
+status = "5m"
+telemetry = "5m"
+
+[player]
+default_url = "@PLAYER_URL@"
+frame_timeout = "30s"
+
+[health]
+timeout = "10m"
+critical_units = ["castmill-agent.service", "castmill-session.service", "NetworkManager.service"]
+require_output = true

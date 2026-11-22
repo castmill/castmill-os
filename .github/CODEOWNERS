@@ -1,0 +1,8 @@
+# Maintainer review is required for build, CI and security-relevant paths
+# (spec 10 "Public-repository safety rules").
+# TODO: replace with the maintainers team once the GitHub organization is set up.
+*                       @castmill/castmill-os-maintainers
+/.github/               @castmill/castmill-os-maintainers
+/kas/                   @castmill/castmill-os-maintainers
+/layers/                @castmill/castmill-os-maintainers
+/scripts/gen-dev-keys.sh @castmill/castmill-os-maintainers

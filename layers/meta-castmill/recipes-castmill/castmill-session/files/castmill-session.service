@@ -1,0 +1,37 @@
+[Unit]
+Description=Castmill OS display session (Weston kiosk-shell)
+Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/06-display-and-media.md
+After=systemd-user-sessions.service castmill-agent.service getty@tty7.service
+Wants=castmill-agent.service
+Conflicts=getty@tty7.service
+RequiresMountsFor=/data
+# Spec 05, recovery layer 3: a crash loop of the whole session reboots.
+StartLimitIntervalSec=10min
+StartLimitBurst=5
+StartLimitAction=reboot
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=player
+Group=castmill
+PAMName=castmill-session
+TTYPath=/dev/tty7
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty7
+UtmpMode=user
+Environment=XDG_SESSION_TYPE=wayland
+RuntimeDirectory=castmill-session
+ExecStart=/usr/libexec/castmill/castmill-session
+ExecStartPost=+/usr/libexec/castmill/castmill-outputs
+Restart=always
+RestartSec=3
+WatchdogSec=60
+
+[Install]
+WantedBy=graphical.target

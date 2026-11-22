@@ -1,0 +1,13 @@
+[Unit]
+Description=Castmill OS data partition setup (grow, check, factory reset)
+DefaultDependencies=no
+Requires=boot.mount
+After=boot.mount systemd-udevd.service
+Before=data.mount
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/castmill/castmill-data-setup
+TimeoutSec=15min

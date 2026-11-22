@@ -1,0 +1,28 @@
+# Castmill OS for Raspberry Pi 5 / Compute Module 5.
+
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+machine: raspberrypi5
+
+# The RAUC bundle needs A/B boot, which is still a Phase 0 decision on Pi 5.
+target:
+  - castmill-os-image
+
+repos:
+  meta-raspberrypi:
+    url: https://github.com/agherzan/meta-raspberrypi.git
+    branch: wrynose
+
+local_conf_header:
+  castmill-rpi5: |
+    # Required by the Raspberry Pi Wi-Fi/Bluetooth firmware packages.
+    LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
+    # Two HDMI outputs, full KMS driver.
+    VC4DTBO = "vc4-kms-v3d"
+    # GPT layout shared with the other targets (files/wic/castmill-rpi.wks.in).
+    CMDLINE_ROOTFS = "root=PARTUUID=${CASTMILL_UUID_ROOTFS_A} rootfstype=ext4 ro rootwait systemd.gpt_auto=0"
+    CASTMILL_FIRMWARE = "linux-firmware-rpidistro-bcm43455 bluez-firmware-rpidistro-bcm4345c0-hcd"
+    # TODO (Phase 0): A/B boot (tryboot vs U-Boot) and signed boot.

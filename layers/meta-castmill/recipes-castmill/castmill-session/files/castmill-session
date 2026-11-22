@@ -1,0 +1,8 @@
+#!/bin/sh
+# Castmill OS display session: Weston with kiosk-shell (ADR-0004).
+# Runs as the "player" user inside a logind session on tty7.
+set -eu
+INI="${RUNTIME_DIRECTORY:-/run/castmill-session}/weston.ini"
+/usr/bin/castmill-agent session-config weston > "$INI.tmp"
+mv "$INI.tmp" "$INI"
+exec /usr/bin/weston --backend=drm --shell=kiosk --config="$INI" --socket=wayland-castmill --idle-time=0

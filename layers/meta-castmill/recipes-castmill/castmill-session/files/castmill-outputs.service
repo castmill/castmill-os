@@ -1,0 +1,7 @@
+[Unit]
+Description=Start or stop Castmill players for connected outputs
+After=castmill-session.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/castmill/castmill-outputs

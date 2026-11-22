@@ -1,0 +1,14 @@
+[Unit]
+Description=Castmill OS data partition
+Requires=castmill-data-setup.service
+After=castmill-data-setup.service
+Before=local-fs.target
+
+[Mount]
+What=/dev/disk/by-partuuid/@UUID_DATA@
+Where=/data
+Type=ext4
+Options=noatime,commit=30,nodev,nosuid
+
+[Install]
+WantedBy=local-fs.target

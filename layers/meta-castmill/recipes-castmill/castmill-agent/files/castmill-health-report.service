@@ -1,0 +1,12 @@
+[Unit]
+Description=Castmill OS periodic health report
+RequiresMountsFor=/data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/castmill-agent health --report-only
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=-/run/castmill-agent
+ProtectHome=yes
+PrivateTmp=yes

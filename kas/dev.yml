@@ -1,0 +1,13 @@
+# Development overlay. Combine with a target:
+#   kas build kas/vm-arm64.yml:kas/dev.yml
+#
+# NEVER sign dev images with production keys (see docs/specs/04-security.md).
+
+header:
+  version: 14
+
+local_conf_header:
+  castmill-dev: |
+    EXTRA_IMAGE_FEATURES += "allow-empty-password empty-root-password allow-root-login"
+    EXTRA_IMAGE_FEATURES += "ssh-server-openssh tools-debug"
+    CASTMILL_DEV_IMAGE = "1"

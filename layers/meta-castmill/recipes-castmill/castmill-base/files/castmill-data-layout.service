@@ -1,0 +1,14 @@
+[Unit]
+Description=Castmill OS data directory layout
+DefaultDependencies=no
+Requires=data.mount
+After=data.mount
+Before=local-fs.target var-lib-systemd.mount var-lib-NetworkManager.mount var-volatile-log-journal.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/systemd-tmpfiles --create /usr/lib/tmpfiles.d/castmill-data.conf
+
+[Install]
+WantedBy=local-fs.target

@@ -1,0 +1,26 @@
+#!/usr/sbin/nft -f
+# Castmill OS firewall (SEC-004): no inbound ports; outbound only.
+flush ruleset
+
+table inet castmill {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid drop
+        iif lo accept
+        # IPv6 needs neighbour discovery and router advertisements.
+        icmpv6 type { destination-unreachable, packet-too-big, time-exceeded, parameter-problem,
+                      nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } accept
+        icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+        # DHCPv6 client replies.
+        ip6 saddr fe80::/10 udp sport 547 udp dport 546 accept
+        # Development images add rules here (SSH).
+        include "/etc/nftables/castmill-input.d/*.nft"
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}

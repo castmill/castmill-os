@@ -1,0 +1,21 @@
+[Unit]
+Description=Castmill OS post-boot health check (commit or roll back the slot)
+Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/05-reliability.md
+Wants=castmill-agent.service
+After=castmill-agent.service castmill-session.service rauc.service
+RequiresMountsFor=/data /boot
+
+[Service]
+# Long-running during a trial boot (up to the health timeout); doesn't block boot.
+Type=simple
+ExecStart=/usr/bin/castmill-agent health
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/data /boot -/run/castmill-agent
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+# PAM service for castmill-session.service: no authentication (started by
+# systemd as the player user), but a real logind session so Weston gets the
+# seat (DRM/input devices) and XDG_RUNTIME_DIR.
+auth     required pam_permit.so
+account  required pam_permit.so
+password required pam_deny.so
+session  required pam_loginuid.so
+session  optional pam_systemd.so

@@ -1,0 +1,4 @@
+# Larger GitHub-hosted runners use custom labels (spec 10 "Runner strategy").
+self-hosted-runner:
+  labels:
+    - castmill-os-builder

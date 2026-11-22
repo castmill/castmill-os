@@ -1,0 +1,15 @@
+[Unit]
+Description=Castmill OS provisioning (castmill.conf)
+Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/08-installation-and-provisioning.md
+DefaultDependencies=no
+After=local-fs.target castmill-data-layout.service
+Before=NetworkManager.service systemd-timesyncd.service castmill-agent.service
+RequiresMountsFor=/data /boot
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/castmill-agent provision
+
+[Install]
+WantedBy=multi-user.target

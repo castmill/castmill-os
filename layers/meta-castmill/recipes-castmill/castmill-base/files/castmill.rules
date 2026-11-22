@@ -1,0 +1,22 @@
+// Castmill OS polkit rules (spec 04 "Least privilege").
+// The agent may reboot the device and restart the graphical session and the
+// player instances; nothing else.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "agent") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    if (action.id === "org.freedesktop.login1.reboot" ||
+        action.id === "org.freedesktop.login1.reboot-multiple-sessions" ||
+        action.id === "org.freedesktop.login1.reboot-ignore-inhibit") {
+        return polkit.Result.YES;
+    }
+    if (action.id === "org.freedesktop.systemd1.manage-units") {
+        var unit = action.lookup("unit") || "";
+        var verb = action.lookup("verb") || "";
+        if (/^castmill-(session|player@[A-Za-z0-9_.-]+)\.service$/.test(unit) &&
+            (verb === "start" || verb === "stop" || verb === "restart")) {
+            return polkit.Result.YES;
+        }
+    }
+    return polkit.Result.NOT_HANDLED;
+});

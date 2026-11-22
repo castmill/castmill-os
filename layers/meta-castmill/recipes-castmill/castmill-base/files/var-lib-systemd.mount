@@ -1,0 +1,15 @@
+[Unit]
+Description=Persistent /var/lib/systemd (on /data)
+DefaultDependencies=no
+Requires=castmill-data-layout.service
+After=castmill-data-layout.service var-volatile-lib.service
+Before=local-fs.target systemd-timesyncd.service systemd-random-seed.service
+
+[Mount]
+What=/data/var-lib/systemd
+Where=/var/lib/systemd
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target

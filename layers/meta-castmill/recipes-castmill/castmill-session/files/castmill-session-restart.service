@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart the Castmill OS display session after a player crash loop
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart castmill-session.service

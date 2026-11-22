@@ -1,0 +1,17 @@
+#!/bin/sh
+# Start one player per connected output; stop players on disconnected or
+# disabled outputs. Runs as root: after the session starts and on DRM hotplug.
+systemctl -q is-active castmill-session.service || exit 0
+disabled="$(/usr/bin/castmill-agent session-config disabled 2>/dev/null)"
+for c in /sys/class/drm/card*-*; do
+    [ -r "$c/status" ] || continue
+    name="${c##*/}"
+    name="${name#*-}"
+    case "$name" in *[!A-Za-z0-9_.-]*) continue ;; esac
+    unit="castmill-player@$name.service"
+    if [ "$(cat "$c/status")" = connected ] && ! echo "$disabled" | grep -qx "$name"; then
+        systemctl --no-block start "$unit"
+    elif systemctl -q is-active "$unit"; then
+        systemctl --no-block stop "$unit"
+    fi
+done

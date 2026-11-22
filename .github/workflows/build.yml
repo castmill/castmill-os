@@ -1,0 +1,139 @@
+# Yocto builds on larger runners (spec 10, ADR-0006). Trusted code only:
+# pushes to main/release branches, PRs from branches of this repository,
+# and manual runs by maintainers (for reviewed fork PRs).
+name: build
+
+on:
+  push:
+    branches: [main, "release/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit to build (for example a reviewed fork PR head SHA)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.event_name }}-${{ github.ref }}-${{ inputs.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  KAS_VERSION: "5.5"
+
+jobs:
+  build:
+    # Fork PRs never reach the paid runners or the cache.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    name: ${{ matrix.name }}
+    runs-on:
+      group: castmill-os-builders
+      labels: castmill-os-builder
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: x86-64
+            config: kas/x86-64.yml
+            machine: genericx86-64
+          - name: rpi5
+            config: kas/rpi5.yml
+            machine: raspberrypi5
+          - name: vm-arm64
+            config: kas/vm-arm64.yml:kas/dev.yml
+            machine: genericarm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Version
+        id: version
+        run: |
+          # vYYYY.MM.PATCH tags give release versions; everything else is -dev.
+          v="$(git describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
+          case "$v" in
+            v*-*-g*) v="${v#v}"; v="${v%%-*}-dev+$(git rev-parse --short HEAD)" ;;
+            v*)      v="${v#v}" ;;
+            *)       v="2026.11.0-dev+$(git rev-parse --short HEAD)" ;;
+          esac
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Castmill OS version: $v" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore build cache (sstate, downloads)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/sstate
+            ${{ runner.temp }}/downloads
+          key: yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**') }}
+          restore-keys: |
+            yocto-${{ matrix.name }}-
+
+      - name: Development signing keys
+        env:
+          DEV_RAUC_KEY: ${{ secrets.CASTMILL_DEV_RAUC_KEY }}
+          DEV_RAUC_CERT: ${{ secrets.CASTMILL_DEV_RAUC_CERT }}
+          DEV_RAUC_KEYRING: ${{ secrets.CASTMILL_DEV_RAUC_KEYRING }}
+        run: |
+          keys="$RUNNER_TEMP/keys"
+          if [ -n "$DEV_RAUC_KEY" ]; then
+            mkdir -m 700 "$keys"
+            printf '%s\n' "$DEV_RAUC_KEY" > "$keys/rauc-signing.key.pem"
+            printf '%s\n' "$DEV_RAUC_CERT" > "$keys/rauc-signing.cert.pem"
+            printf '%s\n' "$DEV_RAUC_KEYRING" > "$keys/rauc-keyring.pem"
+          else
+            echo "::warning::No development signing keys configured; using throw-away keys" \
+              "(bundles from this run only install on images from this run)."
+            scripts/gen-dev-keys.sh "$keys"
+          fi
+
+      - name: Build
+        env:
+          CONFIG: ${{ matrix.config }}
+          CASTMILL_VERSION: ${{ steps.version.outputs.version }}
+          DL_DIR: ${{ runner.temp }}/downloads
+          SSTATE_DIR: ${{ runner.temp }}/sstate
+        run: |
+          mkdir -p "$DL_DIR" "$SSTATE_DIR"
+          pipx install "kas==${KAS_VERSION}"
+          runtime_args="-v $RUNNER_TEMP/keys:/keys:ro -e CASTMILL_KEYS_DIR=/keys"
+          runtime_args="$runtime_args -e CASTMILL_VERSION=$CASTMILL_VERSION"
+          kas-container --runtime-args "$runtime_args" build "$CONFIG"
+
+      - name: Save build cache (trusted pushes only)
+        if: always() && github.event_name == 'push'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/sstate
+            ${{ runner.temp }}/downloads
+          key: yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**') }}-${{ github.run_id }}
+
+      - name: Collect artifacts
+        env:
+          MACHINE: ${{ matrix.machine }}
+        run: |
+          deploy="build/tmp/deploy/images/$MACHINE"
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          image="$deploy/castmill-os-image-$MACHINE.rootfs"
+          cp -L "$image.wic.zst" "$image.wic.bmap" "$out"/
+          cp -L "$image.spdx.json" "$out"/ 2>/dev/null || true
+          cp -L "$deploy"/castmill-os-bundle-"$MACHINE".raucb "$out"/ 2>/dev/null || true
+          ls -lh "$out"
+          # GitHub Release assets must be < 2 GiB (spec 10).
+          find "$out" -type f -size +2047M -print -exec false {} + || { echo "artifact too large"; exit 1; }
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: image-${{ matrix.name }}
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,2 @@
+# Display hotplug (spec 05 "Display"): re-evaluate players per output.
+SUBSYSTEM=="drm", ACTION=="change", ENV{HOTPLUG}=="1", RUN+="/usr/bin/systemctl --no-block start castmill-outputs.service"

@@ -1,0 +1,57 @@
+# Castmill OS A/B boot selection with boot counting (spec 03, ADR-0002).
+#
+# State lives in grubenv on the ESP and is shared with RAUC (bootloader=grub):
+#   ORDER   slots to try, in order ("A B" or "B A"); RAUC mark-active reorders it
+#   X_OK    1 = slot is bootable; RAUC mark-bad sets 0
+#   X_TRY   boot attempts since the last mark-good (castmill-health resets it)
+# A slot gets 3 attempts. After that GRUB moves on to the next slot in ORDER:
+# a new version that never reaches mark-good falls back to the previous one.
+
+set default=0
+set timeout=0
+
+set ORDER="A B"
+set A_OK=1
+set A_TRY=0
+set B_OK=0
+set B_TRY=0
+if [ -f ${prefix}/grubenv ]; then
+    load_env --file ${prefix}/grubenv
+fi
+
+set SLOT=""
+for S in $ORDER; do
+    if [ "$S" = "A" ]; then OK="$A_OK"; TRY="$A_TRY"; else OK="$B_OK"; TRY="$B_TRY"; fi
+    if [ "$OK" = "1" ]; then
+        # GRUB script has no arithmetic.
+        NEXT=""
+        if [ "$TRY" = "0" ]; then NEXT=1; elif [ "$TRY" = "1" ]; then NEXT=2; elif [ "$TRY" = "2" ]; then NEXT=3; fi
+        if [ -n "$NEXT" ]; then
+            SLOT="$S"
+            if [ "$S" = "A" ]; then A_TRY="$NEXT"; else B_TRY="$NEXT"; fi
+            break
+        fi
+    fi
+done
+
+if [ -z "$SLOT" ]; then
+    # Every bootable slot used up its attempts (for example repeated power
+    # cuts during boot). Booting degraded beats not booting at all.
+    for S in $ORDER; do
+        if [ "$S" = "A" ]; then OK="$A_OK"; else OK="$B_OK"; fi
+        if [ "$OK" = "1" ]; then SLOT="$S"; break; fi
+    done
+fi
+if [ -z "$SLOT" ]; then SLOT=A; fi
+
+save_env --file ${prefix}/grubenv ORDER A_OK A_TRY B_OK B_TRY
+
+# Slots are partitions 2 (A) and 3 (B) of the disk GRUB was loaded from.
+regexp --set 1:BOOTDISK '^([^,]+),' "$root"
+if [ "$SLOT" = "A" ]; then SLOTPART=gpt2; else SLOTPART=gpt3; fi
+set SLOTROOT="($BOOTDISK,$SLOTPART)"
+probe --set SLOTUUID --part-uuid "$SLOTROOT"
+
+echo "Castmill OS: booting slot $SLOT ($SLOTROOT)"
+linux $SLOTROOT/boot/castmill-kernel root=PARTUUID=$SLOTUUID rootfstype=ext4 ro rootwait rauc.slot=$SLOT systemd.gpt_auto=0 @CMDLINE@
+boot

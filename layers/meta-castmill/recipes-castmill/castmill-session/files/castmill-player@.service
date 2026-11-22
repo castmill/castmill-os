@@ -1,0 +1,44 @@
+[Unit]
+Description=Castmill player on output %i
+Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/06-display-and-media.md
+BindsTo=castmill-session.service
+PartOf=castmill-session.service
+After=castmill-session.service castmill-agent.service
+# Spec 05, recovery layers 2-3: restart with back-off; a crash loop restarts
+# the whole graphics session.
+StartLimitIntervalSec=10min
+StartLimitBurst=10
+OnFailure=castmill-session-restart.service
+
+[Service]
+User=player
+Group=castmill
+# UID 901 = player (castmill-base).
+Environment=XDG_RUNTIME_DIR=/run/user/901
+Environment=WAYLAND_DISPLAY=wayland-castmill
+Environment=CASTMILL_USER_DATA=/data/castmill/player
+Environment=CASTMILL_AGENT_SOCKET=/run/castmill-agent/player.sock
+Environment=CASTMILL_PLAYER_CONFIG=/data/castmill/config/agent/player.json
+EnvironmentFile=-/data/castmill/config/proxy.env
+ExecStart=/usr/bin/castmill-player %i
+Restart=always
+RestartSec=2
+
+# Least privilege (SEC-010). Chromium's own sandbox uses user namespaces,
+# so namespaces are not restricted here.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ReadWritePaths=/data/castmill/player
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native

@@ -1,0 +1,11 @@
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: #0b0d10; color: #e8eaed; font-family: sans-serif; }
+main { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; text-align: center; padding: 0 4vw; box-sizing: border-box; }
+.brand { font-size: 2.2vh; letter-spacing: .3em; text-transform: uppercase; color: #8a919a; }
+.lead { font-size: 3.6vh; margin: 0; }
+.code { font: 700 14vh/1 monospace; letter-spacing: .08em; margin-top: 2vh; }
+.detail { font-size: 2.4vh; color: #b0b6bd; margin: 1vh 0 0; max-width: 70vw; }
+.facts { display: grid; grid-template-columns: auto auto; gap: .6vh 2vw; font-size: 2vh; color: #8a919a; margin-top: 4vh; }
+.facts dt { text-align: right; }
+.facts dd { margin: 0; text-align: left; color: #c9ced4; font-family: monospace; }
+.dev { position: fixed; right: 1vw; bottom: 1vh; background: #c00; color: #fff; font-weight: 700; padding: .5vh 1vw; }

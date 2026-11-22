@@ -1,0 +1,15 @@
+[Unit]
+Description=Persistent journal ring buffer (on /data)
+DefaultDependencies=no
+Requires=castmill-data-layout.service
+After=castmill-data-layout.service
+Before=local-fs.target systemd-journal-flush.service
+
+[Mount]
+What=/data/log/journal
+Where=/var/volatile/log/journal
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target

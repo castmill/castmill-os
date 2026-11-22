@@ -1,0 +1,49 @@
+[Unit]
+Description=Castmill device agent
+Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/07-device-management.md
+Wants=network-online.target
+After=network-online.target castmill-provision.service rauc.service dbus.service
+RequiresMountsFor=/data
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=agent
+Group=castmill
+EnvironmentFile=-/data/castmill/config/proxy.env
+ExecStart=/usr/bin/castmill-agent run
+Restart=always
+RestartSec=5
+WatchdogSec=60
+RuntimeDirectory=castmill-agent
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+UMask=0022
+
+# Least privilege (SEC-010). CAP_SYS_TIME: set the clock from the backend's
+# HTTPS Date header when NTP is blocked (spec 05 "Time").
+AmbientCapabilities=CAP_SYS_TIME
+CapabilityBoundingSet=CAP_SYS_TIME
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/data/castmill/identity /data/castmill/state /data/castmill/config/agent
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service @clock
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

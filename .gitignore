@@ -1,0 +1,29 @@
+# Yocto / kas build output
+/build/
+/downloads/
+/sstate-cache/
+/sstate/
+
+# kas checkouts of external layers
+/bitbake/
+/openembedded-core/
+/meta-yocto/
+/meta-openembedded/
+/meta-rauc/
+/meta-raspberrypi/
+
+# Local development VM (scripts/run-vm.sh)
+/.vm/
+
+# macOS
+.DS_Store
+
+# Development signing keys (scripts/gen-dev-keys.sh) — never commit keys
+/build/castmill-dev-keys/
+*.key.pem
+
+# Mock backend state (CAs, uploads)
+/.mock-backend/
+
+# Node
+node_modules/

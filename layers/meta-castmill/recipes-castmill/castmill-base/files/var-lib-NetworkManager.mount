@@ -1,0 +1,15 @@
+[Unit]
+Description=Persistent /var/lib/NetworkManager (on /data)
+DefaultDependencies=no
+Requires=castmill-data-layout.service
+After=castmill-data-layout.service var-volatile-lib.service
+Before=local-fs.target NetworkManager.service
+
+[Mount]
+What=/data/var-lib/NetworkManager
+Where=/var/lib/NetworkManager
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target

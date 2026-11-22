@@ -1,0 +1,11 @@
+#!/bin/sh
+# Start the Castmill player on one output: castmill-player <output>
+# Chromium flags are set per platform by the OS (spec 06 "Electron configuration").
+set -eu
+OUTPUT="${1:?usage: castmill-player <output>}"
+FLAGS=""
+if [ -r /etc/castmill/electron-flags.conf ]; then
+    FLAGS="$(grep -v '^[[:space:]]*\(#\|$\)' /etc/castmill/electron-flags.conf | tr '\n' ' ')"
+fi
+# shellcheck disable=SC2086  # one flag per word
+exec /usr/lib/electron/electron /usr/lib/castmill-player $FLAGS --castmill-output="$OUTPUT"

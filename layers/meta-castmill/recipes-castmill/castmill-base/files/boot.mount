@@ -1,0 +1,12 @@
+[Unit]
+Description=Castmill OS boot partition (bootloader state)
+Before=local-fs.target
+
+[Mount]
+What=/dev/disk/by-partuuid/@UUID_BOOT@
+Where=/boot
+Type=vfat
+Options=noatime,umask=0077,flush,nodev,nosuid,noexec
+
+[Install]
+WantedBy=local-fs.target

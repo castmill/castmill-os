@@ -1,0 +1,22 @@
+# Castmill OS development VM (arm64, UEFI).
+#
+# Runs on Apple Silicon Macs in QEMU (with HVF acceleration) or UTM,
+# using the same UEFI boot flow as the x86-64 image.
+# Use it for functional testing: boot, updates and rollback, agent,
+# player logic, multiple outputs. Video performance must be tested on
+# real hardware. See docs/development.md.
+
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+machine: genericarm64
+# VM guest drivers (virtio-gpu, virtio-net, virtio-blk) come with
+# linux-yocto's generic configuration for this machine.
+
+local_conf_header:
+  castmill-vm-arm64: |
+    EFI_PROVIDER = "grub-efi"
+    # Serial console last: it becomes /dev/console (scripts/run-vm.sh).
+    CASTMILL_KERNEL_CMDLINE = "panic=10 console=tty0 console=ttyAMA0,115200"

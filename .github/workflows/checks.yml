@@ -1,0 +1,114 @@
+# Checks for every pull request (including forks) and push. Standard runners,
+# no secrets (spec 10 "Public-repository safety rules").
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, "release/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTIONLINT_VERSION: "1.7.12"
+  ZIZMOR_VERSION: "1.32.0"
+  YAMLLINT_VERSION: "1.38.0"
+  KAS_VERSION: "5.5"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: yamllint
+        run: pipx run "yamllint==${YAMLLINT_VERSION}" --strict .
+      - name: shellcheck
+        run: |
+          shellcheck --version
+          shellcheck scripts/*.sh \
+            layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-data-setup \
+            layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-zram \
+            layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-session \
+            layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-outputs \
+            layers/meta-castmill/recipes-castmill/castmill-player/files/castmill-player
+      - name: actionlint
+        run: |
+          go install "github.com/rhysd/actionlint/cmd/actionlint@v${ACTIONLINT_VERSION}"
+          "$(go env GOPATH)/bin/actionlint"
+      - name: zizmor
+        run: pipx run "zizmor==${ZIZMOR_VERSION}" --offline .github/workflows
+
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Markdown links (repository-internal)
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
+        with:
+          args: --offline --no-progress --include-fragments './**/*.md'
+          fail: true
+
+  agent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5  # v7.1.0
+        with:
+          go-version-file: agent/go.mod
+          cache: false  # no shared caches for untrusted PR code (zizmor: cache-poisoning)
+      - name: gofmt
+        run: test -z "$(gofmt -l . | tee /dev/stderr)"
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test -race -count=1 ./...
+      - name: Cross-build (device architectures)
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o /dev/null ./cmd/...
+          GOOS=linux GOARCH=arm64 go build -o /dev/null ./cmd/...
+      - name: Go module pins match the Yocto recipe
+        working-directory: .
+        run: scripts/check-go-mods.sh
+
+  player:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: player
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm run check
+
+  kas:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config: [kas/x86-64.yml, kas/rpi5.yml, kas/vm-arm64.yml, "kas/vm-arm64.yml:kas/dev.yml"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve kas configuration
+        env:
+          CONFIG: ${{ matrix.config }}
+        run: pipx run "kas==${KAS_VERSION}" dump "$CONFIG" > /dev/null

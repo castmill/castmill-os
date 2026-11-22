@@ -1,0 +1,21 @@
+# Castmill OS for Intel/AMD x86-64 mini PCs (UEFI).
+#
+# Uses the generic UEFI machine from meta-yocto-bsp.
+# TODO (Phase 0): VA-API needs the Intel media driver (iHD). meta-intel
+# has no Wrynose branch on its GitHub mirror, so decide between using
+# meta-intel from git.yoctoproject.org or carrying an intel-media-driver
+# recipe in meta-castmill.
+
+header:
+  version: 14
+  includes:
+    - kas/base.yml
+
+machine: genericx86-64
+
+local_conf_header:
+  castmill-x86-64: |
+    EFI_PROVIDER = "grub-efi"
+    CASTMILL_KERNEL_CMDLINE = "quiet panic=10 console=tty0 console=ttyS0,115200"
+    # GPU and Wi-Fi firmware for the reference mini PCs.
+    CASTMILL_FIRMWARE = "linux-firmware-i915 linux-firmware-iwlwifi linux-firmware-ibt linux-firmware-rtl8168"

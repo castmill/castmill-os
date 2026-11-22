@@ -1,0 +1,81 @@
+# Castmill OS — common kas configuration (Yocto 6.0 "Wrynose" LTS).
+#
+# Don't build this file directly; build one of the target files:
+#   kas/x86-64.yml   Intel/AMD x86-64 mini PCs (UEFI)
+#   kas/rpi5.yml     Raspberry Pi 5 / Compute Module 5
+#   kas/vm-arm64.yml Development VM for Apple Silicon Macs (QEMU/UTM)
+#
+# Add kas/dev.yml on top for a development image, for example:
+#   kas build kas/vm-arm64.yml:kas/dev.yml
+#
+# Signing keys: CASTMILL_KEYS_DIR must contain rauc-signing.{cert,key}.pem and
+# rauc-keyring.pem (scripts/gen-dev-keys.sh creates development keys).
+#
+# TODO (Phase 0): pin every repository to a commit with `kas lock`
+# and commit the generated *.lock.yml files.
+
+header:
+  version: 14
+
+distro: castmill
+target:
+  - castmill-os-image
+  - castmill-os-bundle
+
+# Passed through to bitbake (CI sets them; the defaults suit local builds).
+env:
+  CASTMILL_VERSION: "2026.11.0-dev"
+  CASTMILL_KEYS_DIR: ""
+
+repos:
+  # This repository (provides layers/meta-castmill).
+  castmill-os:
+    layers:
+      layers/meta-castmill:
+
+  # Since Yocto 6.0 there is no combined "poky" repository;
+  # bitbake, OE-core and meta-yocto are separate.
+  bitbake:
+    url: https://github.com/openembedded/bitbake.git
+    branch: "2.18"
+    layers:
+      .: disabled
+
+  openembedded-core:
+    url: https://github.com/openembedded/openembedded-core.git
+    branch: wrynose
+    layers:
+      meta:
+
+  meta-yocto:
+    url: https://github.com/yoctoproject/meta-yocto.git
+    branch: wrynose
+    layers:
+      # Only for the generic machines (genericx86-64, genericarm64).
+      meta-yocto-bsp:
+
+  meta-openembedded:
+    url: https://github.com/openembedded/meta-openembedded.git
+    branch: wrynose
+    layers:
+      meta-oe:
+      meta-python:
+      meta-networking:
+      meta-multimedia:
+
+  meta-rauc:
+    url: https://github.com/rauc/meta-rauc.git
+    branch: wrynose
+
+local_conf_header:
+  castmill-base: |
+    # DL_DIR and SSTATE_DIR come from the environment (set by CI or by you).
+    BB_GENERATE_MIRROR_TARBALLS = "1"
+    BB_HASHSERVE = "auto"
+    BB_SIGNATURE_HANDLER = "OEEquivHash"
+    # Keep build directories small; CI runners have finite disk.
+    INHERIT += "rm_work"
+    # Same artifact formats for every target (flash with bmaptool / run in QEMU).
+    IMAGE_FSTYPES = "wic.zst wic.bmap"
+    # Empty CASTMILL_KEYS_DIR (kas env default) -> keys next to the build dir.
+    CASTMILL_KEYS_DIR := "${@d.getVar('CASTMILL_KEYS_DIR') or d.getVar('TOPDIR') + '/castmill-dev-keys'}"

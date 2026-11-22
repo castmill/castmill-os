@@ -1,0 +1,18 @@
+# Castmill OS disk layout for UEFI targets (x86-64, vm-arm64). See spec 02.
+#
+#   1 boot     ESP (vfat): GRUB, grub.cfg, grubenv (A/B state)
+#   2 rootfs_a read-only system, slot A (kernel inside the slot: /boot)
+#   3 rootfs_b read-only system, slot B (empty until the first update)
+#   4 data     writable state; grown to the end of the disk on first boot
+#
+# Partition UUIDs come from the distro configuration (CASTMILL_UUID_*).
+
+bootloader --ptable gpt --timeout=0 --configfile="${DEPLOY_DIR_IMAGE}/castmill-grub.cfg"
+
+part /boot --source bootimg_efi --sourceparams="loader=grub-efi,install-kernel-into-boot-dir=false" --label boot --part-name boot --part-type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B --uuid ${CASTMILL_UUID_BOOT} --active --align 1024 --fixed-size 256M --no-fstab-update
+
+part --source rootfs --fstype=ext4 --label rootfs --part-name rootfs_a --uuid ${CASTMILL_UUID_ROOTFS_A} --align 1024 --fixed-size ${CASTMILL_SLOT_SIZE} --no-fstab-update
+
+part --fstype=ext4 --label rootfs --part-name rootfs_b --uuid ${CASTMILL_UUID_ROOTFS_B} --align 1024 --fixed-size ${CASTMILL_SLOT_SIZE} --no-fstab-update
+
+part --fstype=ext4 --label data --part-name data --uuid ${CASTMILL_UUID_DATA} --align 1024 --size 512M --no-fstab-update
