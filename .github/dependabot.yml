@@ -4,7 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
-  - package-ecosystem: gomod
-    directory: /agent
-    schedule:
-      interval: weekly
+    commit-message:
+      prefix: ci
+# Go modules are not updated by Dependabot: the castmill-agent Yocto recipe
+# pins every module by checksum. Bump with `go get` in agent/ and then run
+# scripts/check-go-mods.sh --update (security alerts still come from
+# Dependabot alerts).
