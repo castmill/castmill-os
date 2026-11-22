@@ -25,11 +25,14 @@ const SOCKET = process.env.CASTMILL_AGENT_SOCKET || '/run/castmill-agent/player.
 const PLAYER_CONFIG = process.env.CASTMILL_PLAYER_CONFIG || '/data/castmill/config/agent/player.json';
 const STATUS_PAGE = path.join(__dirname, 'status.html');
 const RETRY_LOAD_MS = 30_000;
+// Development only: a normal window instead of a fullscreen kiosk window,
+// for running the shell on a workstation (see player/README.md).
+const WINDOWED = process.env.CASTMILL_WINDOWED === '1';
 const HANG_RELOAD_MS = 10_000;
 
 // Wayland app ID: Chromium derives it from the desktop file name.
 app.setName(APP_ID);
-app.setDesktopName(`${APP_ID}.desktop`);
+if (process.platform === 'linux') app.setDesktopName(`${APP_ID}.desktop`);
 if (process.env.CASTMILL_USER_DATA) app.setPath('userData', path.join(process.env.CASTMILL_USER_DATA, OUTPUT));
 
 // No Electron auto-updater: the player updates with the OS image (ADR-0003).
@@ -61,9 +64,11 @@ function createWindow() {
   win = new BrowserWindow({
     title: APP_ID,
     show: true,
-    fullscreen: true,
-    frame: false,
-    kiosk: true,
+    fullscreen: !WINDOWED,
+    frame: WINDOWED,
+    kiosk: !WINDOWED,
+    width: 960,
+    height: 540,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
     webPreferences: {
