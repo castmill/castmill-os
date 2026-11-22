@@ -1,6 +1,11 @@
 # Yocto builds on larger runners (spec 10, ADR-0006). Trusted code only:
 # pushes to main/release branches, PRs from branches of this repository,
-# and manual runs by maintainers (for reviewed fork PRs).
+# manual runs by maintainers (for reviewed fork PRs) and release.yml.
+#
+# The builds need the larger-runner group "castmill-os-builders" (label
+# "castmill-os-builder"). Until it exists, set the repository variable
+# CASTMILL_LARGER_RUNNERS to anything but "true" (or leave it unset): the
+# build jobs are skipped with a notice instead of failing.
 name: build
 
 on:
@@ -13,6 +18,14 @@ on:
         description: "Commit to build (for example a reviewed fork PR head SHA)"
         required: false
         type: string
+  workflow_call:
+    secrets:
+      CASTMILL_DEV_RAUC_KEY:
+        required: false
+      CASTMILL_DEV_RAUC_CERT:
+        required: false
+      CASTMILL_DEV_RAUC_KEYRING:
+        required: false
 
 permissions:
   contents: read
@@ -25,9 +38,23 @@ env:
   KAS_VERSION: "5.5"
 
 jobs:
+  runners:
+    # Explains skipped builds while the larger runners aren't set up.
+    if: vars.CASTMILL_LARGER_RUNNERS != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Larger runners not enabled
+        run: |
+          msg="Image builds skipped: the larger-runner group 'castmill-os-builders' is not enabled."
+          msg="$msg Create it (label castmill-os-builder) and set the repository variable CASTMILL_LARGER_RUNNERS=true."
+          echo "::notice::$msg"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
   build:
     # Fork PRs never reach the paid runners or the cache.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      vars.CASTMILL_LARGER_RUNNERS == 'true' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: ${{ matrix.name }}
     runs-on:
       group: castmill-os-builders

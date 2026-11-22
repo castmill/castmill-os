@@ -1,0 +1,60 @@
+# Release: tag vX.Y.Z (or vX.Y.Z-rc.N) -> build every target -> GitHub
+# pre-release with images, RAUC bundles, SBOMs and SHA256SUMS.
+#
+# Initial, development-signed releases for testing (spec 10). Production
+# signing in the protected "production-signing" environment, QEMU/lab test
+# gates, provenance attestations and Castmill manifest registration come later.
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml  # zizmor: ignore[self-repository] actionlint lacks $/ support
+    secrets:
+      CASTMILL_DEV_RAUC_KEY: ${{ secrets.CASTMILL_DEV_RAUC_KEY }}
+      CASTMILL_DEV_RAUC_CERT: ${{ secrets.CASTMILL_DEV_RAUC_CERT }}
+      CASTMILL_DEV_RAUC_KEYRING: ${{ secrets.CASTMILL_DEV_RAUC_KEYRING }}
+
+  publish:
+    needs: build
+    if: vars.CASTMILL_LARGER_RUNNERS == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the GitHub release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          pattern: image-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          cat > "$notes" <<'MD'
+          > **Development-signed test release.** Images and RAUC bundles are signed with
+          > development keys and are meant for testing, not for production screens.
+          > The vm-arm64 image is a development image (SSH, root login).
+
+          Flash: `bmaptool copy castmill-os-image-<machine>.rootfs.wic.zst /dev/<disk>`
+          (see docs/development.md). Updates: serve the `.raucb` bundle to devices
+          built from the same release keys.
+          MD
+          gh release create "$TAG" dist/* --prerelease --title "Castmill OS ${TAG#v}" \
+            --notes-file "$notes" --generate-notes

@@ -58,10 +58,10 @@ The repository is public and open to outside contributions, so untrusted code mu
 | Workflow | Trigger | Runner | What it does |
 |---|---|---|---|
 | `checks.yml` ✅ | every PR, push | standard | Markdown link check, `actionlint`, `zizmor`, yamllint, shellcheck, kas config resolution (later: agent unit tests); Conventional Commits + DCO sign-off on PR commits (`scripts/check-commits.sh`); to add: `reuse lint` |
-| `build.yml` ✅ | push to `main`/`release/*`, internal PRs, manual | larger runners | kas build per target (`x86-64`, `rpi5`, `vm-arm64` dev image); images + SBOM uploaded as workflow artifacts |
+| `build.yml` ✅ | push to `main`/`release/*`, internal PRs, manual, called by `release.yml` | larger runners | kas build per target (`x86-64`, `rpi5`, `vm-arm64` dev image); images, RAUC bundles + SBOM uploaded as workflow artifacts. Skipped with a notice until the repository variable `CASTMILL_LARGER_RUNNERS` is `true`. |
 | `qemu-test.yml` | after `build.yml` | larger runners (KVM) | Boot the x86-64 image in QEMU: health check, A/B update, forced rollback, power-cut simulation |
 | `nightly.yml` | schedule (daily) | larger runners (static IP for the lab) | Full build from `main` → `nightly` channel → hardware lab suites |
-| `release.yml` | tag `v*` | build → signing → publish | See release pipeline below |
+| `release.yml` ✅ (initial) | tag `vX.Y.Z[-rc.N]` | larger runners → standard | Builds all targets and publishes a **development-signed GitHub pre-release** (images, bundles, SBOMs, `SHA256SUMS`). The full pipeline below (test gates, production signing, attestations, manifest registration) replaces it before v1.0. |
 | `cve-watch.yml` | schedule (daily) | GitHub-hosted | Compares the latest release's SBOM against new CVEs; opens an issue if critical |
 | `bump-deps.yml` | schedule (weekly) | GitHub-hosted | Opens PRs for new Yocto layer revisions and Electron releases (Dependabot handles action versions) |
 
