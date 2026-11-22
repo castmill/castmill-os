@@ -31,7 +31,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | REL-004 | Frame heartbeat → reload → restart player; `Restart=always`; player crash loop → session restart; session crash loop → reboot. | `agent/internal/agent` (frame watchdog), unit files | partly tested |
 | REL-005 | Updates write only the inactive slot; `activate-installed=false` so a power cut can't activate an update early; atomic writes (fsync + rename) for all agent state. | `system.conf` (RAUC), `config.WriteFileAtomic` | tested (logic) |
 | REL-006 | Volatile logs + 16 MB persistent journal on `/data`; zram swap; `noatime`, `commit=30`. | `castmill-base` | parsed |
-| REL-007 | Factory reset from Castmill (confirmed with the device ID) or a `factory-reset` file on the boot partition: `/data` is recreated at boot. | `castmill-data-setup`, agent command | parsed / tested (command) |
+| REL-007 | A `factory-reset` file on the boot partition: `/data` is recreated at boot. Factory reset from Castmill needs Castmill support (the agent's reset flag is ready). | `castmill-data-setup`, `agent/internal/system` | parsed |
 | REL-008 | Agent reconnects with back-off; NetworkManager retries forever; clock from the HTTPS `Date` header when NTP is blocked; activation postponed until time is trusted; DRM hotplug starts/stops players. | agent, `castmill-outputs`, udev rule | partly tested |
 
 ## Updates
