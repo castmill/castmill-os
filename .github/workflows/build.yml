@@ -2,10 +2,12 @@
 # pushes to main/release branches, PRs from branches of this repository,
 # manual runs by maintainers (for reviewed fork PRs) and release.yml.
 #
-# The builds need the larger-runner group "castmill-os-builders" (label
-# "castmill-os-builder"). Until it exists, set the repository variable
-# CASTMILL_LARGER_RUNNERS to anything but "true" (or leave it unset): the
-# build jobs are skipped with a notice instead of failing.
+# Runners: standard GitHub-hosted runners (x86-64 and arm64, free for public
+# repositories) by default. A cold build is close to their 6-hour limit, so
+# the bitbake step has its own timeout and the shared-state cache is saved
+# even when it runs out: the next run continues from there. Set the
+# repository variable CASTMILL_LARGER_RUNNERS=true to use the larger-runner
+# group "castmill-os-builders" (label "castmill-os-builder") instead.
 name: build
 
 on:
@@ -38,41 +40,33 @@ env:
   KAS_VERSION: "5.5"
 
 jobs:
-  runners:
-    # Explains skipped builds while the larger runners aren't set up.
-    if: vars.CASTMILL_LARGER_RUNNERS != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Larger runners not enabled
-        run: |
-          msg="Image builds skipped: the larger-runner group 'castmill-os-builders' is not enabled."
-          msg="$msg Create it (label castmill-os-builder) and set the repository variable CASTMILL_LARGER_RUNNERS=true."
-          echo "::notice::$msg"
-          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
-
   build:
-    # Fork PRs never reach the paid runners or the cache.
-    if: >-
-      vars.CASTMILL_LARGER_RUNNERS == 'true' &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Fork PRs never reach the build cache.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ${{ matrix.name }}
-    runs-on:
-      group: castmill-os-builders
-      labels: castmill-os-builder
-    timeout-minutes: 350
+    runs-on: >-
+      ${{ vars.CASTMILL_LARGER_RUNNERS == 'true'
+      && fromJSON('{"group":"castmill-os-builders","labels":"castmill-os-builder"}')
+      || matrix.runner }}
+    timeout-minutes: 355
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: x86-64
-            config: kas/x86-64.yml
-            machine: genericx86-64
-          - name: rpi5
-            config: kas/rpi5.yml
-            machine: raspberrypi5
           - name: vm-arm64
             config: kas/vm-arm64.yml:kas/dev.yml
             machine: genericarm64
+            runner: ubuntu-24.04-arm
+          - name: x86-64
+            config: kas/x86-64.yml
+            machine: genericx86-64
+            runner: ubuntu-latest
+          - name: rpi5
+            config: kas/rpi5.yml
+            machine: raspberrypi5
+            runner: ubuntu-24.04-arm
+    env:
+      WORK: /mnt/yocto
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -88,13 +82,30 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Castmill OS version: $v" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Disk space
+        env:
+          LARGER_RUNNERS: ${{ vars.CASTMILL_LARGER_RUNNERS }}
+        run: |
+          # Standard runners: drop preinstalled SDKs we don't use and build on /mnt.
+          if [ "$LARGER_RUNNERS" != "true" ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+              /opt/hostedtoolcache/CodeQL /usr/local/share/powershell /usr/share/swift || true
+            sudo docker image prune -af >/dev/null || true
+          fi
+          sudo mkdir -p "$WORK"
+          sudo chown "$(id -u):$(id -g)" "$WORK"
+          mkdir -p "$WORK/sstate" "$WORK/downloads" "$WORK/kas"
+          df -h / /mnt
+
       - name: Restore build cache (sstate, downloads)
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
-            ${{ runner.temp }}/sstate
-            ${{ runner.temp }}/downloads
-          key: yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**') }}
+            /mnt/yocto/sstate
+            /mnt/yocto/downloads
+          key: >-
+            yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**',
+            'agent/**', 'player/**') }}
           restore-keys: |
             yocto-${{ matrix.name }}-
 
@@ -117,32 +128,42 @@ jobs:
           fi
 
       - name: Build
+        id: build
+        # Leaves time to save the cache when a cold build runs out of time.
+        timeout-minutes: 320
         env:
           CONFIG: ${{ matrix.config }}
           CASTMILL_VERSION: ${{ steps.version.outputs.version }}
-          DL_DIR: ${{ runner.temp }}/downloads
-          SSTATE_DIR: ${{ runner.temp }}/sstate
+          DL_DIR: /mnt/yocto/downloads
+          SSTATE_DIR: /mnt/yocto/sstate
+          KAS_WORK_DIR: /mnt/yocto/kas
         run: |
-          mkdir -p "$DL_DIR" "$SSTATE_DIR"
           pipx install "kas==${KAS_VERSION}"
           runtime_args="-v $RUNNER_TEMP/keys:/keys:ro -e CASTMILL_KEYS_DIR=/keys"
           runtime_args="$runtime_args -e CASTMILL_VERSION=$CASTMILL_VERSION"
-          kas-container --runtime-args "$runtime_args" build "$CONFIG"
+          # -k: report every failing recipe in one run, not just the first.
+          kas-container --runtime-args "$runtime_args" build "$CONFIG" -- -k
+
+      - name: Disk usage
+        if: always()
+        run: df -h / /mnt
 
       - name: Save build cache (trusted pushes only)
         if: always() && github.event_name == 'push'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
-            ${{ runner.temp }}/sstate
-            ${{ runner.temp }}/downloads
-          key: yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**') }}-${{ github.run_id }}
+            /mnt/yocto/sstate
+            /mnt/yocto/downloads
+          key: >-
+            yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**',
+            'agent/**', 'player/**') }}-${{ github.run_id }}
 
       - name: Collect artifacts
         env:
           MACHINE: ${{ matrix.machine }}
         run: |
-          deploy="build/tmp/deploy/images/$MACHINE"
+          deploy="$WORK/kas/build/tmp/deploy/images/$MACHINE"
           out="$RUNNER_TEMP/out"
           mkdir -p "$out"
           image="$deploy/castmill-os-image-$MACHINE.rootfs"

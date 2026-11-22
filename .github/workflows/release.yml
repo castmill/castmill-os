@@ -23,7 +23,6 @@ jobs:
 
   publish:
     needs: build
-    if: vars.CASTMILL_LARGER_RUNNERS == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # create the GitHub release
