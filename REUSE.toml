@@ -24,3 +24,10 @@ path = ["docs/**", "README.md", "CONTRIBUTING.md"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 The Castmill OS contributors"
 SPDX-License-Identifier = "CC-BY-4.0"
+
+# Documentation site code and configuration (VitePress).
+[[annotations]]
+path = ["docs/.vitepress/**", "docs/package.json", "docs/package-lock.json", "docs/public/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 The Castmill OS contributors"
+SPDX-License-Identifier = "MIT"

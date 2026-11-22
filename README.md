@@ -112,6 +112,8 @@ git tag -s v0.1.0 -m "Castmill OS 0.1.0" && git push origin v0.1.0   # release.y
 
 ## Documentation
 
+**[castmill.github.io/castmill-os](https://castmill.github.io/castmill-os/)**: installation guides for the Raspberry Pi 5, Intel mini PCs and the development VM, configuration, operations, and the specifications below. The site is built from [`docs/`](docs) with VitePress (`cd docs && npm ci && npm run dev` to preview it).
+
 | Spec | Topic |
 |---|---|
 | [01](docs/specs/01-vision-and-requirements.md) | Vision, scope and requirements |
@@ -142,7 +144,7 @@ castmill-os/
 │   ├── workflows/      # checks.yml, build.yml, release.yml (later: qemu-test, nightly, cve-watch)
 │   ├── CODEOWNERS
 │   └── dependabot.yml
-├── docs/
+├── docs/               # documentation site (VitePress): guides, reference, specs, ADRs
 │   ├── specs/          # specifications
 │   ├── adr/            # architecture decision records
 │   ├── castmill-integration.md # device app, castmillOS bridge, agent socket

@@ -14,9 +14,9 @@ on:
   push:
     branches: [main, "release/**"]
     # Documentation changes don't change the image.
-    paths-ignore: ["docs/**", "**/*.md", "LICENSES/**"]
+    paths-ignore: ["docs/**", "**/*.md", "LICENSES/**", ".github/workflows/docs.yml"]
   pull_request:
-    paths-ignore: ["docs/**", "**/*.md", "LICENSES/**"]
+    paths-ignore: ["docs/**", "**/*.md", "LICENSES/**", ".github/workflows/docs.yml"]
   workflow_dispatch:
     inputs:
       ref:

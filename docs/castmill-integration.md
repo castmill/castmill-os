@@ -62,9 +62,9 @@ Not provided on purpose:
 
 Castmill's `@castmill/device` derives the device capabilities from the methods `CastmillOSMachine` implements.
 
-## Agent socket (kiosk shell ↔ castmill-agent)
+## Agent socket
 
-Local only: `/run/castmill-agent/player.sock`, accessible to the `castmill` group. One JSON object per line ([`agent/internal/playerlink`](../agent/internal/playerlink/playerlink.go)).
+Between the kiosk shell and `castmill-agent`, local only: `/run/castmill-agent/player.sock`, accessible to the `castmill` group. One JSON object per line ([`agent/internal/playerlink`](../agent/internal/playerlink/playerlink.go)).
 
 | Direction | Message |
 |---|---|
