@@ -3,33 +3,34 @@ package agent
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/castmill/castmill-os/agent/internal/api"
 	"github.com/castmill/castmill-os/agent/internal/config"
-	"github.com/castmill/castmill-os/agent/internal/mockbackend"
-	"github.com/castmill/castmill-os/agent/internal/playerlink"
+	"github.com/castmill/castmill-os/agent/internal/rauc"
 	"github.com/castmill/castmill-os/agent/internal/state"
 )
 
-// fakePlayer is a minimal stand-in for one Electron player instance.
+// fakePlayer stands in for one kiosk-shell process.
 type fakePlayer struct {
 	t       *testing.T
 	conn    net.Conn
 	mu      sync.Mutex
-	states  []playerlink.PlayerState
+	states  []map[string]any
+	replies map[string]map[string]any
 	reloads int
+	seq     int
 }
 
 func dialPlayer(t *testing.T, sock, output string) *fakePlayer {
@@ -45,9 +46,8 @@ func dialPlayer(t *testing.T, sock, output string) *fakePlayer {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := &fakePlayer{t: t, conn: c}
+	p := &fakePlayer{t: t, conn: c, replies: map[string]map[string]any{}}
 	p.send(map[string]any{"type": "hello", "output": output})
-	p.send(map[string]any{"type": "capabilities", "data": map[string]any{"video_decode": []string{"h264"}}})
 	go p.read()
 	return p
 }
@@ -62,32 +62,46 @@ func (p *fakePlayer) send(m map[string]any) {
 func (p *fakePlayer) read() {
 	sc := bufio.NewScanner(p.conn)
 	for sc.Scan() {
-		var m struct {
-			Type  string                  `json:"type"`
-			ID    string                  `json:"id"`
-			State *playerlink.PlayerState `json:"state"`
-		}
+		var m map[string]any
 		_ = json.Unmarshal(sc.Bytes(), &m)
 		p.mu.Lock()
-		switch m.Type {
+		switch m["type"] {
 		case "state":
-			p.states = append(p.states, *m.State)
+			p.states = append(p.states, m["state"].(map[string]any))
+		case "reply":
+			p.replies[m["id"].(string)] = m
 		case "reload":
 			p.reloads++
-		case "screenshot":
-			go p.send(map[string]any{"type": "screenshot", "id": m.ID, "png": base64.StdEncoding.EncodeToString([]byte("\x89PNG fake"))})
 		}
 		p.mu.Unlock()
 	}
 }
 
-func (p *fakePlayer) last() playerlink.PlayerState {
+func (p *fakePlayer) lastState() map[string]any {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if len(p.states) == 0 {
-		return playerlink.PlayerState{}
+		return nil
 	}
 	return p.states[len(p.states)-1]
+}
+
+// call performs a bridge call and waits for the reply.
+func (p *fakePlayer) call(method string) map[string]any {
+	p.t.Helper()
+	p.mu.Lock()
+	p.seq++
+	id := fmt.Sprint(p.seq)
+	p.mu.Unlock()
+	p.send(map[string]any{"type": "call", "id": id, "method": method})
+	var r map[string]any
+	eventually(p.t, "reply to "+method, 5*time.Second, func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		r = p.replies[id]
+		return r != nil
+	})
+	return r
 }
 
 func eventually(t *testing.T, what string, timeout time.Duration, f func() bool) {
@@ -102,143 +116,166 @@ func eventually(t *testing.T, what string, timeout time.Duration, f func() bool)
 	t.Fatalf("timed out waiting for %s", what)
 }
 
-func TestEndToEnd(t *testing.T) {
-	if testing.Short() {
-		t.Skip("end-to-end")
-	}
+// fakeRAUC records installs.
+type fakeRAUC struct {
+	mu       sync.Mutex
+	installs []string
+}
+
+func (f *fakeRAUC) Status(context.Context) (*rauc.Status, error) {
+	return &rauc.Status{BootSlot: "A", Slots: []rauc.Slot{
+		{Name: "rootfs.0", Class: "rootfs", Bootname: "A", State: "booted"},
+		{Name: "rootfs.1", Class: "rootfs", Bootname: "B", State: "inactive"},
+	}}, nil
+}
+func (f *fakeRAUC) Install(_ context.Context, src string, _ rauc.InstallOptions, _ func(rauc.Progress)) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.installs = append(f.installs, src)
+	return nil
+}
+func (f *fakeRAUC) Mark(context.Context, string, string) error { return nil }
+
+func setup(t *testing.T, backendURL string) (*config.Agent, string) {
+	t.Helper()
 	tmp := t.TempDir()
 	// Unix socket paths are limited to ~104 bytes on macOS.
 	runDir, err := os.MkdirTemp("/tmp", "cm-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(runDir)
-
-	serverCA, _ := mockbackend.NewCA("server")
-	deviceCA, _ := mockbackend.NewCA("device")
-	cert, _ := serverCA.ServerCert([]string{"127.0.0.1"})
-	uploads := filepath.Join(tmp, "uploads")
-	os.MkdirAll(uploads, 0o755)
-	mb := mockbackend.New(mockbackend.Options{DeviceCA: deviceCA, UploadDir: uploads})
-	srv := httptest.NewUnstartedServer(mb.DeviceHandler())
-	srv.TLS = mb.TLSConfig(cert)
-	srv.StartTLS()
-	defer srv.Close()
-
+	t.Cleanup(func() { os.RemoveAll(runDir) })
 	sys := filepath.Join(tmp, "sys")
 	os.MkdirAll(filepath.Join(sys, "sys/class/drm/card0-Virtual-1"), 0o755)
 	os.WriteFile(filepath.Join(sys, "sys/class/drm/card0-Virtual-1/status"), []byte("connected\n"), 0o644)
 	os.MkdirAll(filepath.Join(sys, "etc"), 0o755)
 	os.WriteFile(filepath.Join(sys, "etc/os-release"), []byte("ID=castmill\nVERSION_ID=\"0.1.0\"\n"), 0o644)
-	caFile := filepath.Join(tmp, "backend-ca.pem")
-	os.WriteFile(caFile, serverCA.PEM, 0o644)
 
 	cfg := config.Defaults()
-	cfg.Backend.URL, cfg.Backend.CAFile = srv.URL, caFile
+	cfg.Backend.URL = backendURL
 	cfg.Device.Machine, cfg.Device.Compatible = "genericarm64", "castmill-os-genericarm64"
 	cfg.Paths.DataRoot = filepath.Join(tmp, "data")
 	cfg.Paths.DataDir = filepath.Join(tmp, "data/castmill")
 	cfg.Paths.LogDir = filepath.Join(tmp, "data/log")
 	cfg.Paths.RunDir = runDir
-	cfg.Player.DefaultURL = "https://player.example/?device={device_id}"
-	os.MkdirAll(cfg.Paths.DataRoot, 0o755)
+	os.MkdirAll(cfg.AgentConfigDir(), 0o755)
+	os.Symlink("/usr/share/zoneinfo/Europe/Madrid", cfg.LocaltimePath())
+	return cfg, sys
+}
 
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+func start(t *testing.T, a *Agent) context.CancelFunc {
+	t.Helper()
+	a.Log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	if testing.Verbose() {
-		log = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		a.Log = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	a := &Agent{Cfg: cfg, Log: log, SysRoot: sys}
-	done := make(chan error, 1)
-	go func() { done <- a.Run(ctx) }()
+	done := make(chan struct{})
+	go func() { _ = a.Run(ctx); close(done) }()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Error("agent did not stop")
+		}
+	})
+	return cancel
+}
+
+func TestBridgeAndState(t *testing.T) {
+	var probes int
+	var mu sync.Mutex
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		probes++
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer backend.Close()
+	cfg, sys := setup(t, backend.URL)
+	start(t, &Agent{Cfg: cfg, SysRoot: sys})
 
 	p := dialPlayer(t, cfg.PlayerSocketPath(), "Virtual-1")
-	stopFrames := make(chan struct{})
+
+	// The player is told to load the Castmill device app from the backend.
+	eventually(t, "player state", 5*time.Second, func() bool {
+		s := p.lastState()
+		return s != nil && s["player_url"] == backend.URL+"/" && s["os_version"] == "0.1.0"
+	})
+	eventually(t, "backend online", 5*time.Second, func() bool { s := p.lastState(); return s["online"] == true })
+
+	// machine_id: stable, per output.
+	id1 := p.call("machine_id")["data"].(string)
+	if len(id1) != 32+len("-Virtual-1") || id1[32:] != "-Virtual-1" {
+		t.Fatalf("machine_id = %q", id1)
+	}
+	if id2 := p.call("machine_id")["data"]; id2 != id1 {
+		t.Fatalf("machine_id not stable: %v vs %v", id2, id1)
+	}
+
+	info := p.call("device_info")["data"].(map[string]any)
+	if info["appType"] != "Castmill OS" || info["os"] != "Castmill OS 0.1.0" || info["hardware"] != "genericarm64" {
+		t.Fatalf("device_info = %v", info)
+	}
+	if tz := p.call("timezone")["data"]; tz != "Europe/Madrid" {
+		t.Fatalf("timezone = %v", tz)
+	}
+	if tel := p.call("telemetry"); tel["ok"] != true {
+		t.Fatalf("telemetry = %v", tel)
+	}
+	if r := p.call("reboot"); r["ok"] == true || r["error"] != "reboot not available" {
+		t.Fatalf("reboot without systemd = %v", r)
+	}
+	if r := p.call("format_disk"); r["ok"] == true {
+		t.Fatalf("unknown method must fail: %v", r)
+	}
+
+	// Runtime state for castmill-health: frames and backend reachability.
 	go func() {
-		for {
-			select {
-			case <-stopFrames:
-				return
-			case <-time.After(100 * time.Millisecond):
-				p.send(map[string]any{"type": "frame", "output": "Virtual-1"})
-			}
+		for i := 0; i < 20; i++ {
+			p.send(map[string]any{"type": "frame", "output": "Virtual-1"})
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
-	defer close(stopFrames)
-
-	// 1. Pairing code shown on screen, operator approves it.
-	eventually(t, "pairing code on screen", 10*time.Second, func() bool { return p.last().PairingCode != "" })
-	if p.last().Enrolled || p.last().PlayerURL != "" {
-		t.Fatalf("unexpected state before approval: %+v", p.last())
-	}
-	if err := mb.Approve(p.last().PairingCode, "stores/test"); err != nil {
-		t.Fatal(err)
-	}
-	eventually(t, "player switches to content", 15*time.Second, func() bool {
-		s := p.last()
-		return s.Enrolled && strings.HasPrefix(s.PlayerURL, "https://player.example/?device=dev-")
-	})
-	devID := p.last().DeviceID
-
-	// 2. Device online, status posted with decode capabilities.
-	eventually(t, "device online with status", 10*time.Second, func() bool {
-		for _, d := range mb.Devices() {
-			if d.ID == devID && d.Online && d.Status != nil && d.Status.OSVersion == "0.1.0" && d.Status.DecodeCaps != nil {
-				return true
-			}
-		}
-		return false
-	})
-
-	// 3. Runtime state for castmill-health.
 	eventually(t, "runtime state", 10*time.Second, func() bool {
 		rt, err := state.LoadRuntime(cfg.RuntimeStatePath())
-		return err == nil && rt.Enrolled && !rt.BackendOK.IsZero() &&
+		return err == nil && !rt.BackendOK.IsZero() && rt.Outputs["Virtual-1"].Player &&
 			time.Since(rt.Outputs["Virtual-1"].LastFrame) < 5*time.Second
 	})
 
-	// 4. Commands.
-	cctx, ccancel := context.WithTimeout(ctx, 20*time.Second)
-	defer ccancel()
-	res, err := mb.Command(cctx, devID, api.CmdScreenshot, nil)
-	if err != nil || !res.OK {
-		t.Fatalf("screenshot: %v %+v", err, res)
+	// The device ID survives an agent restart.
+	b, _ := os.ReadFile(filepath.Join(cfg.StateDir(), "machine-id"))
+	if string(b[:32]) != id1[:32] {
+		t.Fatal("machine-id not persisted")
 	}
-	up, _ := res.Data["uploads"].(map[string]any)
-	if b, err := os.ReadFile(filepath.Join(uploads, up["Virtual-1"].(string))); err != nil || string(b) != "\x89PNG fake" {
-		t.Fatalf("uploaded screenshot: %q %v", b, err)
-	}
-	if res, err := mb.Command(cctx, devID, api.CmdReloadPlayer, nil); err != nil || !res.OK {
-		t.Fatalf("reload: %v %+v", err, res)
-	}
-	eventually(t, "player reloaded", 5*time.Second, func() bool { p.mu.Lock(); defer p.mu.Unlock(); return p.reloads == 1 })
-	if res, _ := mb.Command(cctx, devID, "format_disk", nil); res == nil || res.OK {
-		t.Fatalf("unknown command must fail: %+v", res)
-	}
-	if res, _ := mb.Command(cctx, devID, api.CmdFactoryReset, map[string]any{"confirm": "wrong"}); res == nil || res.OK {
-		t.Fatalf("factory reset without confirmation must fail: %+v", res)
-	}
+}
 
-	// 5. Configuration push.
-	if err := mb.SetConfig(devID, api.DeviceConfig{PlayerURL: "https://other.example/{device_id}",
-		Outputs: map[string]api.OutputConfig{"Virtual-1": {Transform: "rotate-90"}}}); err != nil {
+func TestBackendDown(t *testing.T) {
+	cfg, sys := setup(t, "http://127.0.0.1:1") // nothing listens
+	start(t, &Agent{Cfg: cfg, SysRoot: sys})
+	p := dialPlayer(t, cfg.PlayerSocketPath(), "HDMI-A-1")
+	eventually(t, "backend error on screen", 10*time.Second, func() bool {
+		s := p.lastState()
+		return s != nil && s["online"] == false && s["backend_error"] != nil
+	})
+}
+
+func TestDesiredUpdateInstalls(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer backend.Close()
+	cfg, sys := setup(t, backend.URL)
+	if err := config.WriteJSONAtomic(DesiredPath(cfg), api.Desired{Version: "0.2.0", BundleURL: "https://cdn.example/b.raucb"}, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, "new player URL", 10*time.Second, func() bool { return p.last().PlayerURL == "https://other.example/"+devID })
-	var disp map[string]api.OutputConfig
-	eventually(t, "display config", 5*time.Second, func() bool {
-		return config.ReadJSON(cfg.DisplayConfigPath(), &disp) == nil && disp["Virtual-1"].Transform == "rotate-90"
+	r := &fakeRAUC{}
+	start(t, &Agent{Cfg: cfg, SysRoot: sys, RAUC: r})
+	eventually(t, "install", 5*time.Second, func() bool {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		return len(r.installs) == 1 && r.installs[0] == "https://cdn.example/b.raucb"
 	})
-
-	// 6. Revocation: the backend rejects the device; the screen explains it.
-	mb.Revoke(devID)
-	eventually(t, "revoked message", 15*time.Second, func() bool { return strings.Contains(p.last().BackendError, "revoked") })
-
-	cancel()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("agent did not stop")
-	}
+	eventually(t, "installed state", 5*time.Second, func() bool {
+		return state.LoadUpdate(filepath.Join(cfg.StateDir(), "update.json")).State == api.UpdateInstalled
+	})
 }

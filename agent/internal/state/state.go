@@ -24,18 +24,13 @@ type OutputState struct {
 type Runtime struct {
 	Updated      time.Time              `json:"updated"`
 	AgentVersion string                 `json:"agent_version"`
-	Fingerprint  string                 `json:"fingerprint"`
-	Enrolled     bool                   `json:"enrolled"`
-	DeviceID     string                 `json:"device_id,omitempty"`
-	PairingCode  string                 `json:"pairing_code,omitempty"`
+	DeviceName   string                 `json:"device_name"`
 	BackendURL   string                 `json:"backend_url"`
-	BackendOK    time.Time              `json:"backend_ok,omitzero"` // last successful request
+	BackendOK    time.Time              `json:"backend_ok,omitzero"` // last time the backend answered
 	BackendError string                 `json:"backend_error,omitempty"`
-	Connected    bool                   `json:"connected"` // WebSocket up
 	TimeTrusted  bool                   `json:"time_trusted"`
 	Outputs      map[string]OutputState `json:"outputs,omitempty"`
 	Update       api.UpdateStatus       `json:"update"`
-	LastError    string                 `json:"last_error,omitempty"`
 }
 
 // Update is the persistent update bookkeeping.

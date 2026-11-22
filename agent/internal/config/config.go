@@ -56,13 +56,7 @@ type Agent struct {
 		BootDir  string `toml:"boot_dir"`  // /boot (provisioning file, factory-reset flag)
 		DataRoot string `toml:"data_root"` // /data (mount point; factory-reset flag)
 	} `toml:"paths"`
-	Intervals struct {
-		Desired   Duration `toml:"desired"`
-		Status    Duration `toml:"status"`
-		Telemetry Duration `toml:"telemetry"`
-	} `toml:"intervals"`
 	Player struct {
-		DefaultURL string `toml:"default_url"`
 		// FrameTimeout: an output without a "frame rendered" heartbeat for this
 		// long is reloaded, then restarted (spec 05, recovery layer 1).
 		FrameTimeout Duration `toml:"frame_timeout"`
@@ -86,9 +80,6 @@ func Defaults() *Agent {
 	a.Paths.LogDir = "/data/log/castmill"
 	a.Paths.BootDir = "/boot"
 	a.Paths.DataRoot = "/data"
-	a.Intervals.Desired = Duration{15 * time.Minute}
-	a.Intervals.Status = Duration{5 * time.Minute}
-	a.Intervals.Telemetry = Duration{5 * time.Minute}
 	a.Player.FrameTimeout = Duration{30 * time.Second}
 	a.Health.Timeout = Duration{10 * time.Minute}
 	a.Health.CriticalUnits = []string{"castmill-agent.service", "castmill-session.service", "NetworkManager.service"}

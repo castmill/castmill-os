@@ -1,29 +1,28 @@
 // Package playerlink is the local link between the agent and the player
-// instances (one Electron process per output).
+// instances (one kiosk-shell process per output).
 //
 // Transport: Unix stream socket, one JSON object per line, both directions.
 //
 // Player -> agent:
 //
 //	{"type":"hello","output":"HDMI-A-1"}
-//	{"type":"frame","output":"HDMI-A-1"}             frame-rendered heartbeat
-//	{"type":"capabilities","data":{...}}             GPU / decode info (MED-007)
-//	{"type":"stats","data":{"dropped_frames":0}}     playback telemetry
-//	{"type":"screenshot","id":"...","png":"<b64>"}   answer to a screenshot request
+//	{"type":"frame","output":"HDMI-A-1"}                    frame-rendered heartbeat
+//	{"type":"call","id":"7","method":"telemetry","args":{}}  native Machine call
 //
 // Agent -> player:
 //
-//	{"type":"state","state":{...}}                   enrollment / pairing / URL
+//	{"type":"state","state":{...}}                          player URL, device facts
 //	{"type":"reload"}
-//	{"type":"screenshot","id":"..."}
+//	{"type":"reply","id":"7","ok":true,"data":{...}}         answer to a call
+//
+// Calls come from the Castmill device app through the kiosk shell's
+// castmillOS bridge (docs/castmill-integration.md).
 package playerlink
 
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -34,23 +33,26 @@ import (
 
 // PlayerState is pushed to every player.
 type PlayerState struct {
-	Enrolled     bool   `json:"enrolled"`
-	DeviceID     string `json:"device_id,omitempty"`
-	Fingerprint  string `json:"fingerprint"`
-	PairingCode  string `json:"pairing_code,omitempty"`
 	PlayerURL    string `json:"player_url,omitempty"`
 	DevImage     bool   `json:"dev_image"`
 	OSVersion    string `json:"os_version"`
+	DeviceName   string `json:"device_name"` // short local identifier for support
 	BackendError string `json:"backend_error,omitempty"`
 	Online       bool   `json:"online"`
 }
+
+// Handler answers a call from the player on output.
+type Handler func(ctx context.Context, output, method string, args json.RawMessage) (any, error)
 
 type msg struct {
 	Type   string          `json:"type"`
 	Output string          `json:"output,omitempty"`
 	ID     string          `json:"id,omitempty"`
-	PNG    string          `json:"png,omitempty"`
-	Data   json.RawMessage `json:"data,omitempty"`
+	Method string          `json:"method,omitempty"`
+	Args   json.RawMessage `json:"args,omitempty"`
+	OK     bool            `json:"ok,omitempty"`
+	Data   any             `json:"data,omitempty"`
+	Error  string          `json:"error,omitempty"`
 	State  *PlayerState    `json:"state,omitempty"`
 }
 
@@ -74,20 +76,18 @@ func (c *conn) send(m msg) error {
 
 // Server accepts player connections.
 type Server struct {
-	log    *slog.Logger
-	mu     sync.Mutex
-	ln     net.Listener
-	byOut  map[string]*conn
-	frames map[string]time.Time
-	caps   json.RawMessage
-	stats  map[string]json.RawMessage
-	state  PlayerState
-	shots  map[string]chan []byte
+	log     *slog.Logger
+	handler Handler
+	mu      sync.Mutex
+	ln      net.Listener
+	byOut   map[string]*conn
+	frames  map[string]time.Time
+	state   PlayerState
 }
 
 // Listen creates the socket at path (mode 0660; the directory restricts access
 // to the castmill group).
-func Listen(path string, log *slog.Logger) (*Server, error) {
+func Listen(path string, handler Handler, log *slog.Logger) (*Server, error) {
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)
 	if err != nil {
@@ -97,8 +97,7 @@ func Listen(path string, log *slog.Logger) (*Server, error) {
 		ln.Close()
 		return nil, err
 	}
-	return &Server{log: log, ln: ln, byOut: map[string]*conn{}, frames: map[string]time.Time{},
-		stats: map[string]json.RawMessage{}, shots: map[string]chan []byte{}}, nil
+	return &Server{log: log, handler: handler, ln: ln, byOut: map[string]*conn{}, frames: map[string]time.Time{}}, nil
 }
 
 // Serve accepts connections until ctx is done.
@@ -114,21 +113,21 @@ func (s *Server) Serve(ctx context.Context) {
 			time.Sleep(time.Second)
 			continue
 		}
-		go s.handle(&conn{c: c})
+		go s.handle(ctx, &conn{c: c})
 	}
 }
 
-func (s *Server) handle(c *conn) {
+func (s *Server) handle(ctx context.Context, c *conn) {
 	defer c.c.Close()
 	sc := bufio.NewScanner(c.c)
-	sc.Buffer(make([]byte, 64<<10), 32<<20) // screenshots are large
+	sc.Buffer(make([]byte, 64<<10), 1<<20)
 	for sc.Scan() {
 		var m msg
 		if err := json.Unmarshal(sc.Bytes(), &m); err != nil {
 			s.log.Warn("player: bad message", "err", err)
 			continue
 		}
-		s.dispatch(c, m)
+		s.dispatch(ctx, c, m)
 	}
 	s.mu.Lock()
 	if c.output != "" && s.byOut[c.output] == c {
@@ -138,42 +137,46 @@ func (s *Server) handle(c *conn) {
 	s.mu.Unlock()
 }
 
-func (s *Server) dispatch(c *conn, m msg) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Server) dispatch(ctx context.Context, c *conn, m msg) {
 	switch m.Type {
 	case "hello":
 		if m.Output == "" {
 			return
 		}
+		s.mu.Lock()
 		c.output = m.Output
 		s.byOut[m.Output] = c
-		s.log.Info("player connected", "output", m.Output)
 		st := s.state
-		go func() { _ = c.send(msg{Type: "state", State: &st}) }()
+		s.mu.Unlock()
+		s.log.Info("player connected", "output", m.Output)
+		_ = c.send(msg{Type: "state", State: &st})
 	case "frame":
 		out := m.Output
 		if out == "" {
 			out = c.output
 		}
 		if out != "" {
+			s.mu.Lock()
 			s.frames[out] = time.Now()
+			s.mu.Unlock()
 		}
-	case "capabilities":
-		s.caps = m.Data
-	case "stats":
-		if c.output != "" {
-			s.stats[c.output] = m.Data
+	case "call":
+		if c.output == "" || s.handler == nil {
+			_ = c.send(msg{Type: "reply", ID: m.ID, Error: "say hello first"})
+			return
 		}
-	case "screenshot":
-		if ch, ok := s.shots[m.ID]; ok {
-			png, err := base64.StdEncoding.DecodeString(m.PNG)
-			if err != nil || len(png) == 0 {
-				png = nil // reported as an error to the backend
+		go func() {
+			cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+			data, err := s.handler(cctx, c.output, m.Method, m.Args)
+			r := msg{Type: "reply", ID: m.ID, OK: err == nil, Data: data}
+			if err != nil {
+				r.Error = err.Error()
 			}
-			ch <- png
-			delete(s.shots, m.ID)
-		}
+			if err := c.send(r); err != nil {
+				s.log.Warn("player: reply", "err", err)
+			}
+		}()
 	}
 }
 
@@ -182,7 +185,10 @@ func (s *Server) SetState(st PlayerState) {
 	s.mu.Lock()
 	changed := st != s.state
 	s.state = st
-	conns := s.conns()
+	conns := make([]*conn, 0, len(s.byOut))
+	for _, c := range s.byOut {
+		conns = append(conns, c)
+	}
 	s.mu.Unlock()
 	if !changed {
 		return
@@ -190,14 +196,6 @@ func (s *Server) SetState(st PlayerState) {
 	for _, c := range conns {
 		_ = c.send(msg{Type: "state", State: &st})
 	}
-}
-
-func (s *Server) conns() []*conn {
-	out := make([]*conn, 0, len(s.byOut))
-	for _, c := range s.byOut {
-		out = append(out, c)
-	}
-	return out
 }
 
 // Outputs returns the attached outputs and their last frame time.
@@ -218,32 +216,6 @@ func (s *Server) LastFrame(output string) time.Time {
 	return s.frames[output]
 }
 
-// Capabilities returns the last decode/GPU capabilities reported by a player.
-func (s *Server) Capabilities() map[string]any {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.caps) == 0 {
-		return nil
-	}
-	var m map[string]any
-	_ = json.Unmarshal(s.caps, &m)
-	return m
-}
-
-// Stats returns per-output playback stats.
-func (s *Server) Stats() map[string]any {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := map[string]any{}
-	for k, v := range s.stats {
-		var m any
-		if json.Unmarshal(v, &m) == nil {
-			out[k] = m
-		}
-	}
-	return out
-}
-
 // Reload asks the player on output to reload its window.
 func (s *Server) Reload(output string) error {
 	s.mu.Lock()
@@ -253,32 +225,4 @@ func (s *Server) Reload(output string) error {
 		return fmt.Errorf("no player on output %s", output)
 	}
 	return c.send(msg{Type: "reload"})
-}
-
-// Screenshot requests a PNG of output's window.
-func (s *Server) Screenshot(ctx context.Context, output string) ([]byte, error) {
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
-	ch := make(chan []byte, 1)
-	s.mu.Lock()
-	c := s.byOut[output]
-	if c != nil {
-		s.shots[id] = ch
-	}
-	s.mu.Unlock()
-	if c == nil {
-		return nil, fmt.Errorf("no player on output %s", output)
-	}
-	defer func() { s.mu.Lock(); delete(s.shots, id); s.mu.Unlock() }()
-	if err := c.send(msg{Type: "screenshot", ID: id}); err != nil {
-		return nil, err
-	}
-	select {
-	case png := <-ch:
-		if png == nil {
-			return nil, errors.New("player returned an invalid screenshot")
-		}
-		return png, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
 }

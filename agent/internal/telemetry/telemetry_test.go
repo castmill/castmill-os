@@ -1,8 +1,10 @@
 package telemetry
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,32 +27,43 @@ func TestSample(t *testing.T) {
 	write(t, root, "proc/uptime", "1234.5 999.0\n")
 	write(t, root, "sys/class/thermal/thermal_zone0/temp", "48500\n")
 	write(t, root, "sys/class/thermal/thermal_zone0/type", "cpu-thermal\n")
-	write(t, root, "sys/devices/platform/soc/soc:firmware/get_throttled", "0x50000\n")
-	write(t, root, "sys/class/mmc_host/mmc0/mmc0:0001/life_time", "0x01 0x02\n")
+	write(t, root, "proc/net/route", "Iface\tDestination\tGateway\nwlan0\t00000000\t0102A8C0\n")
+	write(t, root, "sys/class/net/wlan0/wireless/.keep", "")
+	write(t, root, "proc/net/wireless", "Inter-| sta-|   Quality\n face | tus | link level noise\n wlan0: 0000   56.  -54.  -256 0 0 0 0 0 0\n")
 
 	s := &Sampler{Root: root, DataPath: root}
-	if got := s.Sample(); got.CPUPercent != 0 {
-		t.Fatalf("first sample must report 0 CPU, got %v", got.CPUPercent)
+	if got := s.Sample(); got.CPUUsagePercent != nil {
+		t.Fatalf("first sample must not report CPU usage, got %v", *got.CPUUsagePercent)
 	}
 	write(t, root, "proc/stat", "cpu  200 0 200 1300 200 0 0 0 0 0\n") // +200 busy, +700 idle/iowait
-	tel := s.Sample()
-	if tel.CPUPercent < 22 || tel.CPUPercent > 23 { // 200/900
-		t.Errorf("cpu = %v", tel.CPUPercent)
+	d := s.Sample()
+	if d.CPUUsagePercent == nil || *d.CPUUsagePercent < 22 || *d.CPUUsagePercent > 23 { // 200/900
+		t.Errorf("cpu = %v", d.CPUUsagePercent)
 	}
-	if tel.Load1 != 0.42 || tel.MemTotalKB != 4000000 || tel.MemAvailKB != 3000000 || tel.UptimeS != 1234.5 {
-		t.Errorf("unexpected values: %+v", tel)
+	if *d.CPULoadAvg != (LoadAvg{0.42, 0.30, 0.20}) {
+		t.Errorf("load = %+v", d.CPULoadAvg)
 	}
-	if tel.Temperatures["cpu-thermal/thermal_zone0"] != 48.5 {
-		t.Errorf("temps = %v", tel.Temperatures)
+	if d.Memory.TotalBytes != 4000000*1024 || d.Memory.UsedBytes != 1000000*1024 {
+		t.Errorf("memory = %+v", d.Memory)
 	}
-	if tel.Throttled != "0x50000" {
-		t.Errorf("throttled = %q", tel.Throttled)
+	if d.UptimeSeconds != 1234.5 || d.Storage == nil || d.Storage.TotalBytes == 0 {
+		t.Errorf("uptime/storage = %v %+v", d.UptimeSeconds, d.Storage)
 	}
-	if tel.StorageWear["mmc0:0001/life_time"] != "0x01 0x02" {
-		t.Errorf("wear = %v", tel.StorageWear)
+	if len(d.Temperatures) != 1 || d.Temperatures[0] != (Temperature{"cpu-thermal", 48.5}) {
+		t.Errorf("temps = %+v", d.Temperatures)
 	}
-	if tel.DataTotalB == 0 {
-		t.Error("data size not reported")
+	if d.Network == nil || d.Network.Type != "wifi" || d.Network.WifiSignalStrengthPercent == nil || *d.Network.WifiSignalStrengthPercent != 80 {
+		t.Errorf("network = %+v", d.Network)
+	}
+
+	// JSON field names follow Castmill's TelemetryData.
+	b, _ := json.Marshal(d)
+	for _, k := range []string{`"storage":{"totalBytes"`, `"memory":{"totalBytes"`, `"cpuUsagePercent"`,
+		`"cpuLoadAvg":{"one":0.42,"five":0.3,"fifteen":0.2}`, `"temperatures":[{"label":"cpu-thermal","celsius":48.5}]`,
+		`"network":{"type":"wifi","wifiSignalStrengthPercent":80}`, `"uptimeSeconds":1234.5`} {
+		if !strings.Contains(string(b), k) {
+			t.Errorf("JSON lacks %s: %s", k, b)
+		}
 	}
 }
 

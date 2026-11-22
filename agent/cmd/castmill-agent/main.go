@@ -6,6 +6,9 @@
 //	                           (castmill-health.service, root)
 //	castmill-agent health --report-only   periodic check (castmill-health.timer)
 //	castmill-agent provision   apply castmill.conf (castmill-provision.service, root)
+//	castmill-agent update URL VERSION [--now]
+//	                           install an OS update bundle (development and support;
+//	                           Castmill-driven OS updates come with the backend support)
 //	castmill-agent session-config weston|disabled
 //	                           compositor configuration for the display session
 //	castmill-agent status      print the agent state (for support / SSH on dev images)
@@ -27,6 +30,7 @@ import (
 	"syscall"
 
 	"github.com/castmill/castmill-os/agent/internal/agent"
+	"github.com/castmill/castmill-os/agent/internal/api"
 	"github.com/castmill/castmill-os/agent/internal/config"
 	"github.com/castmill/castmill-os/agent/internal/health"
 	"github.com/castmill/castmill-os/agent/internal/provision"
@@ -45,6 +49,7 @@ func main() {
 	cfgPath := fs.String("config", config.DefaultPath, "agent configuration file")
 	verbose := fs.Bool("v", false, "debug logging")
 	reportOnly := fs.Bool("report-only", false, "health: never mark slots or reboot")
+	now := fs.Bool("now", false, "update: activate right after installing (ignore the maintenance window)")
 	_ = fs.Parse(args)
 
 	level := slog.LevelInfo
@@ -78,6 +83,8 @@ func main() {
 		err = printStatus(cfg)
 	case "session-config":
 		err = sessionConfig(cfg, fs.Arg(0))
+	case "update":
+		err = requestUpdate(cfg, fs.Arg(0), fs.Arg(1), *now)
 	case "version":
 		fmt.Println(agent.Version)
 	default:
@@ -89,7 +96,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: castmill-agent run|health [--report-only]|provision|session-config weston|disabled|status|version [--config FILE]")
+	fmt.Fprintln(os.Stderr, "usage: castmill-agent run|health [--report-only]|provision|update URL VERSION [--now]|session-config weston|disabled|status|version [--config FILE]")
 	os.Exit(2)
 }
 
@@ -234,5 +241,23 @@ func sessionConfig(cfg *config.Agent, what string) error {
 	default:
 		return fmt.Errorf("session-config: unknown format %q (weston, disabled)", what)
 	}
+	return nil
+}
+
+// requestUpdate records the desired OS version; the running agent installs
+// it in the background and activates it in the maintenance window (or right
+// away with --now).
+func requestUpdate(cfg *config.Agent, url, version string, now bool) error {
+	if url == "" || version == "" {
+		return fmt.Errorf("usage: castmill-agent update URL VERSION [--now]")
+	}
+	d := api.Desired{Version: version, BundleURL: url, ActivatePolicy: api.ActivateWindow}
+	if now {
+		d.ActivatePolicy = api.ActivateNow
+	}
+	if err := config.WriteJSONAtomic(agent.DesiredPath(cfg), d, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("requested update to %s (%s); follow it with: castmill-agent status\n", version, d.ActivatePolicy)
 	return nil
 }

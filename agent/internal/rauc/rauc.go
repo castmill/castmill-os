@@ -8,8 +8,6 @@ import (
 	"sort"
 
 	"github.com/godbus/dbus/v5"
-
-	"github.com/castmill/castmill-os/agent/internal/api"
 )
 
 const (
@@ -54,16 +52,6 @@ func (s *Status) Other() *Slot {
 		}
 	}
 	return nil
-}
-
-// API converts to the wire type.
-func (s *Status) API() []api.Slot {
-	out := make([]api.Slot, 0, len(s.Slots))
-	for _, sl := range s.Slots {
-		out = append(out, api.Slot{Name: sl.Name, Bootname: sl.Bootname, State: sl.State,
-			BootStatus: sl.BootStatus, BundleVersion: sl.BundleVersion})
-	}
-	return out
 }
 
 // Progress is reported while installing.

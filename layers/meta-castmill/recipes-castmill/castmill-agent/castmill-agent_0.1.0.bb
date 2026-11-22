@@ -1,7 +1,7 @@
 SUMMARY = "Castmill OS device agent"
-DESCRIPTION = "Enrollment, backend connection, A/B updates through RAUC, \
-maintenance windows, health checks, remote commands and telemetry. \
-See docs/specs/07-device-management.md."
+DESCRIPTION = "Native side of the Castmill device app (castmillOS bridge), \
+A/B updates through RAUC with maintenance windows, health checks, \
+provisioning and player supervision. See docs/castmill-integration.md."
 HOMEPAGE = "https://github.com/castmill/castmill-os"
 # Agent code: Apache-2.0 (ADR-0007). Vendored Go modules: MIT, ISC,
 # BSD-2-Clause, BSD-3-Clause.
@@ -52,7 +52,6 @@ do_install() {
         -e 's|@DEV@|${CASTMILL_AGENT_DEV}|g' \
         -e 's|@MACHINE@|${MACHINE}|' \
         -e 's|@COMPATIBLE@|${CASTMILL_COMPATIBLE}|' \
-        -e 's|@PLAYER_URL@|${CASTMILL_PLAYER_URL}|' \
         ${UNPACKDIR}/agent.toml.in > ${D}${sysconfdir}/castmill/agent.toml
     chmod 0644 ${D}${sysconfdir}/castmill/agent.toml
 
@@ -62,7 +61,7 @@ do_install() {
         install -m 0644 ${UNPACKDIR}/$u ${D}${systemd_system_unitdir}/
     done
 }
-do_install[vardeps] += "CASTMILL_BACKEND_URL CASTMILL_BACKEND_CA CASTMILL_DEV_IMAGE CASTMILL_COMPATIBLE CASTMILL_PLAYER_URL"
+do_install[vardeps] += "CASTMILL_BACKEND_URL CASTMILL_BACKEND_CA CASTMILL_DEV_IMAGE CASTMILL_COMPATIBLE"
 
 SYSTEMD_SERVICE:${PN} = "castmill-agent.service castmill-health.service castmill-health-report.timer castmill-provision.service"
 
