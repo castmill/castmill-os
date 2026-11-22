@@ -4,20 +4,23 @@
 // One process per display output (castmill-player@<output>.service). The
 // compositor pins the window to its output by Wayland app ID
 // "castmill-output-<output>" (ADR-0004). The process:
-//   - shows the local status page (pairing code, errors) until the device is
-//     enrolled, then the Castmill player URL from the agent;
-//   - sends a "frame rendered" heartbeat to castmill-agent, plus GPU/decode
-//     capabilities and playback stats;
-//   - answers screenshot and reload requests from the agent;
+//   - loads the Castmill device app from the backend (player URL from
+//     castmill-agent); the device app does pairing, content and commands;
+//   - answers the device app's native calls through the castmillOS bridge
+//     (Castmill's Machine interface, docs/castmill-integration.md);
+//   - shows a local status page while the device app can't be loaded;
+//   - sends a "frame rendered" heartbeat to castmill-agent;
 //   - recovers from renderer crashes and hangs (spec 05, layer 1).
 // Security (spec 04): contextIsolation + sandbox, no Node.js in renderers,
-// navigation limited to the player origin, permissions denied by default.
+// navigation limited to the player origin, the bridge answers only that
+// origin's main frame, permissions denied by default.
 
 const { app, BrowserWindow, ipcMain, session, powerSaveBlocker } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { AgentLink } = require('./agentlink');
-const { decideView, isNavigationAllowed, outputFromArgv } = require('./policy');
+const { MachineBridge } = require('./bridge');
+const { decideView, isNavigationAllowed, isTrustedBridgeSender, outputFromArgv } = require('./policy');
 
 const OUTPUT = outputFromArgv(process.argv);
 const APP_ID = `castmill-output-${OUTPUT}`;
@@ -25,17 +28,17 @@ const SOCKET = process.env.CASTMILL_AGENT_SOCKET || '/run/castmill-agent/player.
 const PLAYER_CONFIG = process.env.CASTMILL_PLAYER_CONFIG || '/data/castmill/config/agent/player.json';
 const STATUS_PAGE = path.join(__dirname, 'status.html');
 const RETRY_LOAD_MS = 30_000;
+const HANG_RELOAD_MS = 10_000;
 // Development only: a normal window instead of a fullscreen kiosk window,
 // for running the shell on a workstation (see player/README.md).
 const WINDOWED = process.env.CASTMILL_WINDOWED === '1';
-const HANG_RELOAD_MS = 10_000;
 
 // Wayland app ID: Chromium derives it from the desktop file name.
 app.setName(APP_ID);
 if (process.platform === 'linux') app.setDesktopName(`${APP_ID}.desktop`);
 if (process.env.CASTMILL_USER_DATA) app.setPath('userData', path.join(process.env.CASTMILL_USER_DATA, OUTPUT));
 
-// No Electron auto-updater: the player updates with the OS image (ADR-0003).
+// No Electron auto-updater: the shell updates with the OS image (ADR-0003).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-features', 'Translate,MediaRouter');
 
@@ -56,9 +59,23 @@ let agentState = null;
 let current = { view: null, url: null };
 let hangTimer = null;
 let retryTimer = null;
-let devBadge = false;
 
 const agent = new AgentLink(SOCKET, OUTPUT);
+let bridge = null;
+
+const devImage = () => Boolean(agentState?.dev_image);
+const navigationAllowed = (url) =>
+  isNavigationAllowed(url, current.url, readPlayerConfig().allowed_origins || [], devImage());
+
+function restartPlayer() {
+  log('restart requested by the Castmill device app');
+  if (process.env.INVOCATION_ID) {
+    app.exit(0); // systemd starts a fresh instance (Restart=always)
+  } else {
+    app.relaunch();
+    app.exit(0);
+  }
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -86,13 +103,13 @@ function createWindow() {
 
   wc.setWindowOpenHandler(() => ({ action: 'deny' }));
   wc.on('will-navigate', (e, url) => {
-    if (!isNavigationAllowed(url, current.url, readPlayerConfig().allowed_origins || [])) {
+    if (!navigationAllowed(url)) {
       log('blocked navigation to', url);
       e.preventDefault();
     }
   });
   wc.on('will-redirect', (e, url) => {
-    if (!isNavigationAllowed(url, current.url, readPlayerConfig().allowed_origins || [])) {
+    if (!navigationAllowed(url)) {
       log('blocked redirect to', url);
       e.preventDefault();
     }
@@ -125,7 +142,7 @@ function createWindow() {
   });
   wc.on('did-finish-load', () => {
     log('showing', current.view === 'content' ? current.url : 'status page');
-    if (devBadge && current.view === 'content') {
+    if (devImage() && current.view === 'content') {
       wc.insertCSS(
         'html::after{content:"DEVELOPMENT IMAGE";position:fixed;right:8px;bottom:8px;z-index:2147483647;' +
           'background:#c00;color:#fff;font:bold 14px sans-serif;padding:4px 8px;pointer-events:none}',
@@ -156,7 +173,6 @@ function showStatus(s) {
 function apply() {
   if (!win) return;
   const d = decideView(agentState);
-  devBadge = Boolean(agentState?.dev_image);
   if (d.view === 'status') {
     showStatus({ reason: d.reason });
     return;
@@ -164,7 +180,7 @@ function apply() {
   if (current.view === 'content' && current.url === d.url) return;
   clearTimeout(retryTimer);
   current = { view: 'content', url: d.url };
-  log('loading player', d.url);
+  log('loading', d.url);
   win.loadURL(d.url).catch(() => {}); // failures handled in did-fail-load
 }
 
@@ -178,7 +194,7 @@ function reloadCurrent() {
   }
 }
 
-agent.on('message', async (m) => {
+agent.on('message', (m) => {
   switch (m.type) {
     case 'state':
       agentState = m.state;
@@ -188,22 +204,9 @@ agent.on('message', async (m) => {
       log('reload requested by agent');
       reloadCurrent();
       break;
-    case 'screenshot':
-      try {
-        const img = await win.webContents.capturePage();
-        if (img.isEmpty()) throw new Error('nothing rendered yet');
-        agent.send({ type: 'screenshot', id: m.id, png: img.toPNG().toString('base64') });
-      } catch (e) {
-        log('screenshot failed:', e.message);
-        agent.send({ type: 'screenshot', id: m.id, png: '' });
-      }
-      break;
   }
 });
-agent.on('connect', () => {
-  log('connected to agent');
-  sendCapabilities();
-});
+agent.on('connect', () => log('connected to agent'));
 agent.on('disconnect', () => {
   log('agent connection lost');
   if (current.view === 'status') showStatus(lastStatus);
@@ -214,30 +217,22 @@ agent.on('disconnect', () => {
 ipcMain.on('castmill:frame', (e) => {
   if (win && e.sender === win.webContents) agent.send({ type: 'frame', output: OUTPUT });
 });
-ipcMain.on('castmill:stats', (e, stats) => {
-  if (win && e.sender === win.webContents && stats && typeof stats === 'object') {
-    agent.send({ type: 'stats', data: { url: current.url, ...stats } });
+
+// castmillOS bridge: Machine calls from the Castmill device app.
+ipcMain.handle('castmill:machine', async (e, method, args) => {
+  const frame = e.senderFrame;
+  if (!win || e.sender !== win.webContents || !frame || frame !== win.webContents.mainFrame ||
+      current.view !== 'content' || !isTrustedBridgeSender(frame.url, current.url, devImage())) {
+    log('rejected bridge call from', frame?.url);
+    throw new Error('castmillOS: caller not allowed');
+  }
+  try {
+    return await bridge.handle(String(method), Array.isArray(args) ? args : []);
+  } catch (err) {
+    log(`bridge ${method} failed:`, err.message);
+    throw err;
   }
 });
-
-async function sendCapabilities() {
-  try {
-    const info = await app.getGPUInfo('complete');
-    agent.send({
-      type: 'capabilities',
-      data: {
-        electron: process.versions.electron,
-        chrome: process.versions.chrome,
-        gpu_feature_status: app.getGPUFeatureStatus(),
-        video_decoding: info.videoDecoding ?? info.auxAttributes?.videoDecodeAcceleratorSupportedProfile ?? null,
-        gpu_devices: (info.gpuDevice || []).map((d) => ({ vendor: d.vendorId, device: d.deviceId, driver: d.driverVendor })),
-        aux: info.auxAttributes ? { gl_renderer: info.auxAttributes.glRenderer, gl_version: info.auxAttributes.glVersion } : null,
-      },
-    });
-  } catch (e) {
-    log('GPU info:', e.message);
-  }
-}
 
 app.whenReady().then(() => {
   powerSaveBlocker.start('prevent-display-sleep');
@@ -246,6 +241,13 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(allowed.has(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => allowed.has(perm));
   if (process.env.CASTMILL_PROXY_CA) log('note: custom proxy CA is not yet imported into Chromium (TODO)');
+  bridge = new MachineBridge({
+    dir: app.getPath('userData'),
+    agentCall: (method) => agent.call(method),
+    versions: process.versions,
+    restart: restartPlayer,
+    clearCache: () => session.defaultSession.clearCache(),
+  });
   createWindow();
   showStatus({ reason: 'starting' });
   agent.start();

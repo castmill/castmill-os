@@ -1,10 +1,11 @@
 # Castmill OS kiosk shell
 
-Electron app that hosts the Castmill player on a Castmill OS device: one
-process per display output (`castmill-player@<output>.service`). It shows the
-local status page (pairing code, errors) until the device is enrolled, then
-the player URL from `castmill-agent`, and reports frames, GPU/decode
-capabilities and playback stats to the agent. See
+Electron app that runs Castmill's device app on a Castmill OS device: one
+process per display output (`castmill-player@<output>.service`). It loads the
+device app from the Castmill backend (player URL from `castmill-agent`),
+answers its native `Machine` calls through the `castmillOS` bridge, shows a
+local status page while the backend can't be reached, and reports frames to
+the agent. See [Castmill integration](../docs/castmill-integration.md),
 [spec 06](../docs/specs/06-display-and-media.md) and
 [ADR-0004](../docs/adr/0004-sway-kiosk-compositor.md).
 
@@ -19,8 +20,9 @@ npm run check     # syntax + unit tests (navigation policy, agent link)
 
 ## Run it on a workstation
 
-Run the agent against the mock backend (see [device API](../docs/device-api.md#mock-backend-development)),
-then start the shell in a normal window with Electron 45:
+Run `castmill-agent run --config <agent.toml>` with `[backend] url` pointing at
+a Castmill backend (a local one on `http://localhost:4000` works), then start
+the shell in a normal window with Electron 45:
 
 ```sh
 npm install --no-save electron@45.4.1

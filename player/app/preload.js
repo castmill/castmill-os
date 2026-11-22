@@ -1,7 +1,11 @@
 'use strict';
-// Preload (isolated world, sandboxed). Runs for every page, including remote
-// player content, so it exposes nothing to remote pages and only reports
-// frames and playback stats to the main process.
+// Preload (isolated world, sandboxed). Runs for every page.
+//
+// - Reports a frame heartbeat to the main process.
+// - Exposes window.castmillOS (bridge version 1) to web pages: the Castmill
+//   device app uses it as its Machine (docs/castmill-integration.md). The main
+//   process answers only the main frame of the Castmill origin.
+// - Gives the local status page (file://) read-only state updates.
 
 const { ipcRenderer, contextBridge } = require('electron');
 
@@ -16,23 +20,16 @@ function tick(ts) {
 }
 requestAnimationFrame(tick);
 
-// Playback quality of every <video> element (dropped frames, MGT-004).
-setInterval(() => {
-  const videos = Array.from(document.querySelectorAll('video'));
-  if (videos.length === 0) return;
-  let dropped = 0;
-  let total = 0;
-  for (const v of videos) {
-    const q = v.getVideoPlaybackQuality?.();
-    if (q) {
-      dropped += q.droppedVideoFrames;
-      total += q.totalVideoFrames;
-    }
-  }
-  ipcRenderer.send('castmill:stats', { videos: videos.length, dropped_frames: dropped, total_frames: total });
-}, 60_000);
+if (location.protocol === 'https:' || location.protocol === 'http:') {
+  contextBridge.exposeInMainWorld(
+    'castmillOS',
+    Object.freeze({
+      version: 1,
+      call: (method, ...args) => ipcRenderer.invoke('castmill:machine', String(method), args),
+    }),
+  );
+}
 
-// The local status page (file://) gets read-only state updates.
 if (location.protocol === 'file:') {
   contextBridge.exposeInMainWorld('castmillKiosk', {
     onState: (cb) => ipcRenderer.on('castmill:state', (_e, s) => cb(s)),

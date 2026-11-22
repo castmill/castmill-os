@@ -53,6 +53,19 @@ test('hello, messages both ways, reconnect after agent restart', async () => {
   assert.deepStrictEqual(s.lines[0], { type: 'hello', output: 'HDMI-A-1' });
   assert.ok(link.send({ type: 'frame', output: 'HDMI-A-1' }));
 
+  // call(): replies settle the matching promise; errors reject.
+  s.srv.once('line', () => {});
+  const p1 = link.call('timezone');
+  const p2 = link.call('reboot');
+  await new Promise((r) => setTimeout(r, 50));
+  const calls = s.lines.filter((l) => l.type === 'call');
+  assert.deepStrictEqual(calls.map((c) => c.method), ['timezone', 'reboot']);
+  s.conns[0].write(JSON.stringify({ type: 'reply', id: calls[1].id, error: 'reboot not available' }) + '\n');
+  s.conns[0].write(JSON.stringify({ type: 'reply', id: calls[0].id, ok: true, data: 'Europe/Madrid' }) + '\n');
+  assert.strictEqual(await p1, 'Europe/Madrid');
+  await assert.rejects(p2, /reboot not available/);
+  await assert.rejects(link.call('telemetry', {}, 50), /timed out/);
+
   link.close();
   s.srv.close();
   fs.rmSync(dir, { recursive: true, force: true });
