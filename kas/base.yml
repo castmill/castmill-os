@@ -59,9 +59,9 @@ repos:
     branch: wrynose
     layers:
       meta-oe:
+      # Required by meta-networking.
       meta-python:
       meta-networking:
-      meta-multimedia:
 
   meta-rauc:
     url: https://github.com/rauc/meta-rauc.git
