@@ -114,7 +114,9 @@ function createWindow() {
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3 /* aborted */) return;
     log(`load failed (${code} ${desc}): ${url}`);
-    showStatus({ reason: 'offline', detail: desc });
+    // Not from inside the failing navigation's event: a load started here
+    // can be dropped, leaving an unpainted window.
+    setImmediate(() => showStatus({ reason: 'offline', detail: desc }));
     clearTimeout(retryTimer);
     retryTimer = setTimeout(() => {
       current = { view: null, url: null };
@@ -122,6 +124,7 @@ function createWindow() {
     }, RETRY_LOAD_MS);
   });
   wc.on('did-finish-load', () => {
+    log('showing', current.view === 'content' ? current.url : 'status page');
     if (devBadge && current.view === 'content') {
       wc.insertCSS(
         'html::after{content:"DEVELOPMENT IMAGE";position:fixed;right:8px;bottom:8px;z-index:2147483647;' +
@@ -188,6 +191,7 @@ agent.on('message', async (m) => {
     case 'screenshot':
       try {
         const img = await win.webContents.capturePage();
+        if (img.isEmpty()) throw new Error('nothing rendered yet');
         agent.send({ type: 'screenshot', id: m.id, png: img.toPNG().toString('base64') });
       } catch (e) {
         log('screenshot failed:', e.message);
