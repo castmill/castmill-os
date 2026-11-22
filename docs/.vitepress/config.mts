@@ -10,6 +10,10 @@ const REPO_DIR = path.resolve(DOCS_DIR, '..')
 // Project pages by default (castmill.github.io/castmill-os/). A custom domain
 // sets DOCS_BASE=/ in the deploy workflow.
 const base = process.env.DOCS_BASE ?? '/castmill-os/'
+// Absolute URL of the site, for link previews (og:image must be absolute).
+const SITE_URL = `${process.env.DOCS_ORIGIN ?? 'https://castmill.github.io'}${base}`
+const SOCIAL_DESCRIPTION =
+  'Open source, immutable and self-healing Linux for digital signage. One signed image that updates itself safely and never needs a visit.'
 
 /**
  * The Markdown files are also read on GitHub, so they link to source files and
@@ -137,15 +141,19 @@ export default defineConfig({
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
     ['meta', { name: 'theme-color', content: '#fd4f00' }],
+    // Link previews (Slack, X, LinkedIn, GitHub...). The cover is
+    // public/og.png, rendered from .vitepress/social/cover.html.
     ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'Castmill OS' }],
     ['meta', { property: 'og:title', content: 'Castmill OS' }],
-    [
-      'meta',
-      {
-        property: 'og:description',
-        content: 'Immutable, self-healing Linux for digital signage screens.',
-      },
-    ],
+    ['meta', { property: 'og:description', content: SOCIAL_DESCRIPTION }],
+    ['meta', { property: 'og:url', content: SITE_URL }],
+    ['meta', { property: 'og:image', content: `${SITE_URL}og.png` }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { property: 'og:image:alt', content: 'Castmill OS: immutable, self-healing Linux for digital signage' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:image', content: `${SITE_URL}og.png` }],
   ],
 
   markdown: {
