@@ -7,7 +7,7 @@ FLAGS=""
 if [ -r /etc/castmill/electron-flags.conf ]; then
     FLAGS="$(grep -v '^[[:space:]]*\(#\|$\)' /etc/castmill/electron-flags.conf | tr '\n' ' ')"
 fi
-# shellcheck disable=SC2086  # one flag per word
 # Electron must run as Electron, never as plain Node.js.
 unset ELECTRON_RUN_AS_NODE
+# shellcheck disable=SC2086  # one flag per word
 exec /usr/lib/electron/electron /usr/lib/castmill-player $FLAGS --castmill-output="$OUTPUT"
