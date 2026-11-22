@@ -15,6 +15,9 @@ permissions:
 
 jobs:
   build:
+    permissions:
+      contents: read
+      actions: write  # build.yml replaces each target's build cache
     uses: ./.github/workflows/build.yml  # zizmor: ignore[self-repository] actionlint lacks $/ support
     secrets:
       CASTMILL_DEV_RAUC_KEY: ${{ secrets.CASTMILL_DEV_RAUC_KEY }}

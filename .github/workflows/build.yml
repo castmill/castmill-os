@@ -47,6 +47,9 @@ jobs:
     # Fork PRs never reach the build cache.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ${{ matrix.name }}
+    permissions:
+      contents: read
+      actions: write  # replace this target's build cache
     runs-on: >-
       ${{ vars.CASTMILL_LARGER_RUNNERS == 'true'
       && fromJSON('{"group":"castmill-os-builders","labels":"castmill-os-builder"}')
@@ -100,7 +103,19 @@ jobs:
           mkdir -p "$WORK/sstate" "$WORK/downloads" "$WORK/kas"
           df -h / /mnt
 
-      - name: Restore build cache (sstate, downloads)
+      # Yocto build cache: one entry per target, replaced by every push build
+      # (sstate only; the downloads directory is saved empty, see below).
+      # The repository's cache size limit is raised above GitHub's free
+      # 10 GB to fit all targets.
+      - name: Cache key
+        id: cache
+        env:
+          NAME: ${{ matrix.name }}
+          HASH: ${{ hashFiles('kas/*.yml', 'layers/**', 'agent/**', 'player/**') }}
+          RUN: ${{ github.run_id }}
+        run: echo "key=yocto-$NAME-$HASH-$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: Restore build cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
@@ -151,16 +166,47 @@ jobs:
         if: always()
         run: df -h / /mnt
 
+      - name: Trim the build cache
+        if: always() && github.event_name == 'push'
+        env:
+          BUILD_OK: ${{ steps.build.outcome == 'success' }}
+        run: |
+          du -sh "$WORK/sstate" "$WORK/downloads" || true
+          # With sstate, BitBake only fetches the sources of recipes that
+          # rebuild, so caching downloads isn't worth its size. Keep the
+          # directory (the cache paths must not change) but empty it.
+          find "$WORK/downloads" -mindepth 1 -delete
+          # Drop sstate objects this build didn't use (older versions of
+          # recipes). Only after a successful build: a failed one hasn't
+          # visited every task.
+          if [ "$BUILD_OK" = true ]; then
+            python3 "$WORK/kas/openembedded-core/scripts/sstate-cache-management.py" \
+              --cache-dir="$WORK/sstate" --stamps-dir="$WORK/kas/build/tmp/stamps" -y \
+              || echo "::warning::sstate pruning failed; saving the cache unpruned"
+          fi
+          du -sh "$WORK/sstate"
+
       - name: Save build cache (trusted pushes only)
+        id: save
         if: always() && github.event_name == 'push'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
           path: |
             /mnt/yocto/sstate
             /mnt/yocto/downloads
-          key: >-
-            yocto-${{ matrix.name }}-${{ hashFiles('kas/*.yml', 'layers/**',
-            'agent/**', 'player/**') }}-${{ github.run_id }}
+          key: ${{ steps.cache.outputs.key }}
+
+      - name: Delete this target's older caches
+        if: always() && steps.save.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: yocto-${{ matrix.name }}-
+          KEEP: ${{ steps.cache.outputs.key }}
+        run: |
+          gh cache list --key "$PREFIX" --limit 100 --json id,key \
+            --jq '.[] | select(.key != env.KEEP) | .id' |
+            while read -r id; do gh cache delete "$id"; done
 
       - name: Collect artifacts
         env:
