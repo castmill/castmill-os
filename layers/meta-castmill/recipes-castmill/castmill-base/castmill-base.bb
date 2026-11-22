@@ -36,7 +36,9 @@ inherit systemd useradd allarch
 
 # Fixed IDs keep file ownership on /data stable across OS versions.
 USERADD_PACKAGES = "${PN}"
-GROUPADD_PARAM:${PN} = "-r -g 900 castmill; -r -f render"
+# The systemd-journal and render groups are created by the systemd recipe.
+USERADD_DEPENDS = "systemd"
+GROUPADD_PARAM:${PN} = "-r -g 900 castmill"
 USERADD_PARAM:${PN} = " \
     -r -u 901 -g castmill -G video,render,input,audio -d /data/castmill/player -M -s /sbin/nologin player; \
     -r -u 902 -g castmill -G systemd-journal -d /data/castmill -M -s /sbin/nologin agent \
