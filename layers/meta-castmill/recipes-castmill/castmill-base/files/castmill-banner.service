@@ -1,0 +1,12 @@
+[Unit]
+Description=Castmill OS boot banner
+DefaultDependencies=no
+After=systemd-vconsole-setup.service
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/castmill/castmill-banner
+
+[Install]
+WantedBy=sysinit.target

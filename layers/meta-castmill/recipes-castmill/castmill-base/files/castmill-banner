@@ -1,0 +1,28 @@
+#!/bin/sh
+# Print the Castmill OS logo and version on every active console (screen and
+# serial) early during boot. Weston replaces it once the display session starts.
+LOGO=/usr/share/castmill/logo.txt
+
+version=unknown machine=unknown dev=0
+# shellcheck source=/dev/null  # generated at image build time
+[ -r /etc/castmill-release ] && . /etc/castmill-release
+version="${CASTMILL_VERSION:-$version}"
+machine="${MACHINE:-$machine}"
+dev="${DEV_IMAGE:-$dev}"
+slot="$(sed -n 's/.*rauc\.slot=\([A-Za-z0-9]*\).*/\1/p' /proc/cmdline)"
+
+info="Castmill OS $version - $machine"
+[ -n "$slot" ] && info="$info - slot $slot"
+[ "$dev" = 1 ] && info="$info - DEVELOPMENT IMAGE"
+
+banner() {
+    printf '\n'
+    [ -r "$LOGO" ] && cat "$LOGO"
+    printf '\n  %s\n\n' "$info"
+}
+
+consoles="$(cat /sys/class/tty/console/active 2>/dev/null)"
+for c in ${consoles:-console}; do
+    [ -w "/dev/$c" ] && banner > "/dev/$c" 2>/dev/null
+done
+exit 0

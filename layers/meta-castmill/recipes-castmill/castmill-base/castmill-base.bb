@@ -27,6 +27,8 @@ SRC_URI = " \
     file://castmill.rules \
     file://castmill-rauc.dbus.conf \
     file://sysctl.conf \
+    file://castmill-banner \
+    file://castmill-banner.service \
 "
 S = "${UNPACKDIR}"
 
@@ -43,19 +45,19 @@ USERADD_PARAM:${PN} = " \
 SYSTEMD_SERVICE:${PN} = " \
     castmill-data-setup.service castmill-data-layout.service \
     data.mount boot.mount var-lib-systemd.mount var-lib-NetworkManager.mount var-volatile-log-journal.mount \
-    castmill-zram.service castmill-firewall.service \
+    castmill-zram.service castmill-firewall.service castmill-banner.service \
 "
 SYSTEMD_AUTO_ENABLE = "enable"
 
 do_install() {
     install -d ${D}${libexecdir}/castmill ${D}${systemd_system_unitdir}
-    for f in castmill-data-setup castmill-zram; do
+    for f in castmill-data-setup castmill-zram castmill-banner; do
         sed -e 's|@UUID_DATA@|${CASTMILL_UUID_DATA}|' ${S}/$f > ${D}${libexecdir}/castmill/$f
         chmod 0755 ${D}${libexecdir}/castmill/$f
     done
     for u in castmill-data-setup.service castmill-data-layout.service data.mount boot.mount \
              var-lib-systemd.mount var-lib-NetworkManager.mount var-volatile-log-journal.mount \
-             castmill-zram.service castmill-firewall.service; do
+             castmill-zram.service castmill-firewall.service castmill-banner.service; do
         sed -e 's|@UUID_DATA@|${CASTMILL_UUID_DATA}|' -e 's|@UUID_BOOT@|${CASTMILL_UUID_BOOT}|' \
             ${S}/$u > ${D}${systemd_system_unitdir}/$u
         chmod 0644 ${D}${systemd_system_unitdir}/$u
@@ -68,6 +70,7 @@ do_install() {
     install -D -m 0644 ${S}/rauc.conf ${D}${systemd_system_unitdir}/rauc.service.d/50-castmill.conf
     install -D -m 0644 ${S}/sysctl.conf ${D}${nonarch_libdir}/sysctl.d/50-castmill.conf
 
+    install -D -m 0644 ${CASTMILL_LOGO} ${D}${datadir}/castmill/logo.txt
     install -D -m 0644 ${S}/castmill.nft ${D}${sysconfdir}/nftables/castmill.nft
     install -d ${D}${sysconfdir}/nftables/castmill-input.d
     install -D -m 0644 ${S}/NetworkManager.conf ${D}${sysconfdir}/NetworkManager/conf.d/50-castmill.conf
@@ -79,7 +82,8 @@ do_install() {
     ln -sf /data/castmill/config/timesyncd.conf ${D}${sysconfdir}/systemd/timesyncd.conf.d/50-castmill.conf
     install -d ${D}/data
 }
-do_install[vardeps] += "CASTMILL_UUID_DATA CASTMILL_UUID_BOOT"
+do_install[vardeps] += "CASTMILL_UUID_DATA CASTMILL_UUID_BOOT CASTMILL_LOGO"
+do_install[file-checksums] += "${CASTMILL_LOGO}:True"
 
 # /etc/localtime -> /data (timezone configured from Castmill). Done at rootfs
 # time because other packages (tzdata) also manage /etc/localtime.
@@ -90,7 +94,7 @@ pkg_postinst:${PN}() {
 FILES:${PN} += " \
     ${libexecdir}/castmill ${systemd_system_unitdir} ${systemd_unitdir}/system.conf.d \
     ${systemd_unitdir}/journald.conf.d ${nonarch_libdir}/tmpfiles.d ${nonarch_libdir}/sysctl.d \
-    ${datadir}/polkit-1 ${datadir}/dbus-1 /data \
+    ${datadir}/polkit-1 ${datadir}/dbus-1 ${datadir}/castmill /data \
 "
 
 RDEPENDS:${PN} = " \

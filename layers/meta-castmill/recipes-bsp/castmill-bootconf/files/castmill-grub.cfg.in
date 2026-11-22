@@ -52,6 +52,8 @@ if [ "$SLOT" = "A" ]; then SLOTPART=gpt2; else SLOTPART=gpt3; fi
 set SLOTROOT="($BOOTDISK,$SLOTPART)"
 probe --set SLOTUUID --part-uuid "$SLOTROOT"
 
+@LOGO@
+echo ""
 echo "Castmill OS: booting slot $SLOT ($SLOTROOT)"
 linux $SLOTROOT/boot/castmill-kernel root=PARTUUID=$SLOTUUID rootfstype=ext4 ro rootwait rauc.slot=$SLOT systemd.gpt_auto=0 @CMDLINE@
 boot

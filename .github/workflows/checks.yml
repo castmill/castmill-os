@@ -35,6 +35,7 @@ jobs:
           shellcheck scripts/*.sh \
             layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-data-setup \
             layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-zram \
+            layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-banner \
             layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-session \
             layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-outputs \
             layers/meta-castmill/recipes-castmill/castmill-player/files/castmill-player

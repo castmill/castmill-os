@@ -14,13 +14,23 @@ inherit deploy nopackages
 do_configure[noexec] = "1"
 
 do_compile() {
-    sed -e 's|@CMDLINE@|${CASTMILL_KERNEL_CMDLINE}|' ${UNPACKDIR}/castmill-grub.cfg.in > ${B}/castmill-grub.cfg
+    # Boot logo as GRUB echo commands (single-quoted: printed literally).
+    if LC_ALL=C grep -q "[^ -~]\|'" "${CASTMILL_LOGO}"; then
+        bbfatal "${CASTMILL_LOGO}: the logo must be printable ASCII without single quotes"
+    fi
+    sed -e "s/^/echo '/" -e "s/\$/'/" "${CASTMILL_LOGO}" > ${B}/logo.grub
+    sed -e 's|@CMDLINE@|${CASTMILL_KERNEL_CMDLINE}|' \
+        -e "/@LOGO@/{
+r ${B}/logo.grub
+d
+}" ${UNPACKDIR}/castmill-grub.cfg.in > ${B}/castmill-grub.cfg
     # Factory state: slot A is good, slot B is empty.
     rm -f ${B}/castmill-grubenv
     grub-editenv ${B}/castmill-grubenv create
     grub-editenv ${B}/castmill-grubenv set ORDER="A B" A_OK=1 A_TRY=0 B_OK=0 B_TRY=0
 }
-do_compile[vardeps] += "CASTMILL_KERNEL_CMDLINE"
+do_compile[vardeps] += "CASTMILL_KERNEL_CMDLINE CASTMILL_LOGO"
+do_compile[file-checksums] += "${CASTMILL_LOGO}:True"
 
 do_deploy() {
     install -m 0644 ${B}/castmill-grub.cfg ${DEPLOYDIR}/castmill-grub.cfg

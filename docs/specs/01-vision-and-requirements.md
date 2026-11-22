@@ -135,4 +135,4 @@ These are initial targets. The prototype phase will validate them.
 2. **Standalone use:** will Castmill OS be usable without the Castmill backend, for example with other CMSs or by OEMs? This affects the update server choice ([ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md)).
 3. **Pi encryption:** is at-rest encryption on Raspberry Pi (no TPM) required, or is CM5 with eMMC the recommended secure Pi option?
 4. **Player delivery:** does the player ship only inside the OS image, or can its web assets update independently? (Current proposal: inside the image. See [02](02-system-architecture.md).)
-5. **Branding and naming** of images and channels.
+5. **Branding and naming** of images and channels, and whether OEM/white-label builds are needed (own logo, backend URL and name). For now the boot logo, backend URL and player URL are build-time variables in `meta-castmill`, so a white-label build would be a configuration change, not a fork.
