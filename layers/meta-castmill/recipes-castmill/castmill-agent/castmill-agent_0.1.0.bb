@@ -28,7 +28,8 @@ inherit go-mod systemd
 
 # Modules come from the fetcher (gomod://), never from the network at build time.
 export GOPROXY = "off"
-GO_EXTRA_LDFLAGS = "-s -w -X ${GO_IMPORT}/internal/agent.Version=${PV}"
+# No -s -w: the build strips the binary and keeps symbols in the -dbg package.
+GO_EXTRA_LDFLAGS = "-X ${GO_IMPORT}/internal/agent.Version=${PV}"
 
 do_compile() {
     cd ${B}/src/${GO_IMPORT}
@@ -64,5 +65,7 @@ do_install() {
 do_install[vardeps] += "CASTMILL_BACKEND_URL CASTMILL_BACKEND_CA CASTMILL_DEV_IMAGE CASTMILL_COMPATIBLE"
 
 SYSTEMD_SERVICE:${PN} = "castmill-agent.service castmill-health.service castmill-health-report.timer castmill-provision.service"
+# castmill-health-report.service is started by its timer, not enabled itself.
+FILES:${PN} += "${systemd_system_unitdir}"
 
 RDEPENDS:${PN} = "castmill-base"
