@@ -168,8 +168,8 @@ func (s *Server) dispatch(c *conn, m msg) {
 	case "screenshot":
 		if ch, ok := s.shots[m.ID]; ok {
 			png, err := base64.StdEncoding.DecodeString(m.PNG)
-			if err != nil {
-				png = nil
+			if err != nil || len(png) == 0 {
+				png = nil // reported as an error to the backend
 			}
 			ch <- png
 			delete(s.shots, m.ID)
