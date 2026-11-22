@@ -1,5 +1,14 @@
 # Castmill OS
 
+```text
+  \     /                       __            _ ____   ____  _____
+   \ _ /       _________ ______/ /_____ ___  (_) / /  / __ \/ ___/
+    (o)       / ___/ __ `/ ___/ __/ __ `__ \/ / / /  / / / /\__ \
+   /| |\     / /__/ /_/ (__  ) /_/ / / / / / / / /  / /_/ /___/ /
+  / | | \    \___/\__,_/____/\__/_/ /_/ /_/_/_/_/   \____//____/
+   /___\
+```
+
 **An open source, immutable Linux operating system built for digital signage and the [Castmill](https://castmill.io) player.**
 
 > Status: **initial implementation (v0.1)**. Nothing here is production-ready yet. The specifications in [`docs/specs`](docs/specs) describe what we intend to build and are open for discussion; [implementation status](docs/implementation-status.md) tracks what exists today.
@@ -40,29 +49,36 @@ See [Hardware support](docs/specs/09-hardware-support.md).
 ## Architecture at a glance
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Castmill Player (Electron)          castmill-agent          │
-├─────────────────────────────────────────────────────────────┤
-│ Kiosk compositor (Wayland) · Mesa / KMS                     │
-├─────────────────────────────────────────────────────────────┤
-│ systemd · NetworkManager · RAUC · nftables · journald       │
-├─────────────────────────────────────────────────────────────┤
-│ Linux kernel (read-only rootfs, dm-verity)                  │
-├─────────────────────────────────────────────────────────────┤
-│ Verified boot (UEFI Secure Boot / Pi signed boot) + A/B     │
-└─────────────────────────────────────────────────────────────┘
- Disk:  [ boot ] [ rootfs A ] [ rootfs B ] [ data (encrypted) ]
+┌───────────────────────────────────────────────────────────────────┐
+│ castmill-player@<output>          castmill-agent  (+ health check) │
+│ Electron kiosk shell, one per     enrollment · mTLS · updates ·    │
+│ screen, loads the Castmill player commands · telemetry             │
+├───────────────────────────────────────────────────────────────────┤
+│ Weston kiosk-shell (Wayland) · Mesa / KMS                          │
+├───────────────────────────────────────────────────────────────────┤
+│ systemd · NetworkManager · RAUC · nftables · journald · zram       │
+├───────────────────────────────────────────────────────────────────┤
+│ Linux kernel · read-only rootfs (dm-verity: planned)               │
+├───────────────────────────────────────────────────────────────────┤
+│ GRUB A/B with boot counting (UEFI) · Pi firmware (A/B: planned)    │
+│ Secure Boot / Pi signed boot: planned                              │
+└───────────────────────────────────────────────────────────────────┘
+ Disk (GPT):  [ boot ] [ rootfs_a ] [ rootfs_b ] [ data ]
+               ESP,     read-only    inactive     writable state, grown to
+               grubenv  system       slot         the disk (encryption: planned)
 ```
 
-- **Build system:** Yocto Project 6.0 "Wrynose" LTS, configured with kas
-- **Updates:** RAUC A/B bundles with signing, HTTP streaming and adaptive (delta-like) downloads
-- **Fleet rollout:** managed from the Castmill backend
-- **Player runtime:** Electron (current Castmill Linux player)
-- **CI/CD:** GitHub Actions (GitHub-hosted larger runners) builds, tests (QEMU + real-hardware lab), signs and publishes every release
+- **Build system:** Yocto Project 6.0 "Wrynose" LTS, configured with kas; layer [`meta-castmill`](layers/meta-castmill). Dependencies are kept to the minimum the player needs (no X server, Vulkan, LLVM on the device, Rust, initramfs or package manager).
+- **Updates:** signed RAUC bundles streamed over HTTPS with adaptive downloads, installed into the inactive slot in the background. The agent activates them only inside the device's maintenance window; `castmill-health` commits the new slot or the bootloader rolls back.
+- **Device management:** [`castmill-agent`](agent) (Go, single binary) pairs with the Castmill backend (`https://castmill.net`) using a pairing code, then keeps an outbound mutual-TLS WebSocket for commands, configuration and telemetry. Protocol: [device API](docs/device-api.md).
+- **Display:** Weston kiosk-shell; one Electron process per output, pinned to it by Wayland app ID. Hotplug, per-output mode and rotation from Castmill.
+- **Provisioning:** `castmill.conf` on the boot partition for Wi-Fi, proxy, NTP, time zone and zero-touch enrollment.
+- **Versions:** [SemVer](https://semver.org/) (`vX.Y.Z` tags); commits follow [Conventional Commits](https://www.conventionalcommits.org/) ([CONTRIBUTING](CONTRIBUTING.md#commit-messages)).
+- **CI/CD:** GitHub Actions: checks on every pull request, image builds for every push to `main`, and a development-signed pre-release for every version tag. Standard GitHub-hosted runners for now; larger runners, QEMU and hardware-lab tests and production signing come later ([spec 10](docs/specs/10-build-release-testing.md)).
 
 ## Quick start (development)
 
-Images are built by GitHub Actions for every push. To try the latest one on an Apple Silicon Mac:
+Images are built by GitHub Actions for every push to `main`, and every version tag publishes them as a [GitHub pre-release](https://github.com/castmill/castmill-os/releases). To try the latest development VM image on an Apple Silicon Mac:
 
 ```sh
 brew install qemu zstd gh
@@ -86,7 +102,14 @@ go run ./cmd/castmill-mock-backend --auto-approve   # development backend (devic
 cd ../player && npm run check                # Electron kiosk shell
 ```
 
-See the [development guide](docs/development.md) for real hardware, local builds and limitations.
+See the [development guide](docs/development.md) for the mock backend, update and rollback tests, real hardware, local builds and limitations.
+
+Cutting a test release:
+
+```sh
+scripts/version.sh                           # version of the current commit, e.g. 0.1.1-dev.3.g1a2b3c4
+git tag -s v0.1.0 -m "Castmill OS 0.1.0" && git push origin v0.1.0   # release.yml builds and publishes
+```
 
 ## Documentation
 
@@ -113,8 +136,10 @@ Architecture decisions are recorded in [`docs/adr`](docs/adr). Day-to-day develo
 ```
 castmill-os/
 ├── README.md
+├── CONTRIBUTING.md     # commit conventions, DCO, licensing of contributions
+├── LICENSE, LICENSES/, REUSE.toml
 ├── .github/
-│   ├── workflows/      # checks.yml, build.yml (later: qemu-test, nightly, release, cve-watch)
+│   ├── workflows/      # checks.yml, build.yml, release.yml (later: qemu-test, nightly, cve-watch)
 │   ├── CODEOWNERS
 │   └── dependabot.yml
 ├── docs/
@@ -125,20 +150,23 @@ castmill-os/
 │   └── development.md  # development guide
 ├── kas/                # build configurations: x86-64, rpi5, vm-arm64, dev overlay
 ├── layers/
-│   └── meta-castmill/  # distro, image, RAUC bundle, A/B boot, system integration, recipes
+│   └── meta-castmill/  # distro, image, RAUC bundle, A/B boot, system integration, recipes,
+│                       # boot logo (files/branding)
 ├── agent/              # castmill-agent (Go) + development mock backend
 ├── player/             # Electron kiosk shell hosting the Castmill player
 ├── scripts/
 │   ├── run-vm.sh       # run the development VM on a Mac
 │   ├── gen-dev-keys.sh # development signing keys
-│   └── check-go-mods.sh
+│   ├── version.sh      # SemVer version of the current commit
+│   ├── check-commits.sh # Conventional Commits + DCO check (CI)
+│   └── check-go-mods.sh # Go module pins of the Yocto recipe
 ├── installer/          # (planned) USB / network installer
 └── tests/              # (planned) QEMU and hardware-lab tests
 ```
 
 ## Contributing
 
-The project is at the specification and prototype stage. Issues and pull requests on GitHub are very welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Larger decisions go in an ADR (see [`docs/adr/README.md`](docs/adr/README.md)).
+The project is at the prototype stage. Issues and pull requests on GitHub are very welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Every commit follows Conventional Commits and carries a DCO sign-off (`git commit -s`). Larger decisions go in an ADR (see [`docs/adr/README.md`](docs/adr/README.md)).
 
 Every pull request runs automated checks on GitHub Actions. Full image builds for pull requests from forks are started by a maintainer after review (see [Build, release and testing](docs/specs/10-build-release-testing.md#public-repository-safety-rules)).
 
