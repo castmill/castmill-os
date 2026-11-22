@@ -56,13 +56,8 @@ jobs:
       - name: Version
         id: version
         run: |
-          # vYYYY.MM.PATCH tags give release versions; everything else is -dev.
-          v="$(git describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
-          case "$v" in
-            v*-*-g*) v="${v#v}"; v="${v%%-*}-dev+$(git rev-parse --short HEAD)" ;;
-            v*)      v="${v#v}" ;;
-            *)       v="2026.11.0-dev+$(git rev-parse --short HEAD)" ;;
-          esac
+          # SemVer: vX.Y.Z tags give release versions; other commits a -dev pre-release.
+          v="$(scripts/version.sh)"
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Castmill OS version: $v" >> "$GITHUB_STEP_SUMMARY"
 

@@ -78,8 +78,8 @@ func newEnv(t *testing.T) *env {
 
 	e := &env{t: t, root: root, cfg: cfg, now: time.Date(2026, 11, 22, 3, 30, 0, 0, time.UTC)}
 	e.rauc = &fakeRAUC{status: &rauc.Status{BootSlot: "B", Slots: []rauc.Slot{
-		{Name: "rootfs.0", Class: "rootfs", Bootname: "A", State: "inactive", BootStatus: "good", BundleVersion: "2026.11.0"},
-		{Name: "rootfs.1", Class: "rootfs", Bootname: "B", State: "booted", BootStatus: "good", BundleVersion: "2026.12.0"},
+		{Name: "rootfs.0", Class: "rootfs", Bootname: "A", State: "inactive", BootStatus: "good", BundleVersion: "0.1.0"},
+		{Name: "rootfs.1", Class: "rootfs", Bootname: "B", State: "booted", BootStatus: "good", BundleVersion: "0.2.0"},
 	}}}
 	e.sd = &fakeSystemd{states: map[string]string{}}
 	e.check = &Checker{Cfg: cfg, RAUC: e.rauc, Systemd: e.sd, SysRoot: root,
@@ -100,7 +100,7 @@ func (e *env) runtime(mod func(r *state.Runtime)) {
 
 func (e *env) trial(target string) {
 	if err := state.SaveUpdate(filepath.Join(e.cfg.StateDir(), "update.json"),
-		state.Update{State: api.UpdateActivating, Version: "2026.12.0", TargetSlot: target}); err != nil {
+		state.Update{State: api.UpdateActivating, Version: "0.2.0", TargetSlot: target}); err != nil {
 		e.t.Fatal(err)
 	}
 }

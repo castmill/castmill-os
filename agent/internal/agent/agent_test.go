@@ -129,7 +129,7 @@ func TestEndToEnd(t *testing.T) {
 	os.MkdirAll(filepath.Join(sys, "sys/class/drm/card0-Virtual-1"), 0o755)
 	os.WriteFile(filepath.Join(sys, "sys/class/drm/card0-Virtual-1/status"), []byte("connected\n"), 0o644)
 	os.MkdirAll(filepath.Join(sys, "etc"), 0o755)
-	os.WriteFile(filepath.Join(sys, "etc/os-release"), []byte("ID=castmill\nVERSION_ID=\"2026.11.0\"\n"), 0o644)
+	os.WriteFile(filepath.Join(sys, "etc/os-release"), []byte("ID=castmill\nVERSION_ID=\"0.1.0\"\n"), 0o644)
 	caFile := filepath.Join(tmp, "backend-ca.pem")
 	os.WriteFile(caFile, serverCA.PEM, 0o644)
 
@@ -184,7 +184,7 @@ func TestEndToEnd(t *testing.T) {
 	// 2. Device online, status posted with decode capabilities.
 	eventually(t, "device online with status", 10*time.Second, func() bool {
 		for _, d := range mb.Devices() {
-			if d.ID == devID && d.Online && d.Status != nil && d.Status.OSVersion == "2026.11.0" && d.Status.DecodeCaps != nil {
+			if d.ID == devID && d.Online && d.Status != nil && d.Status.OSVersion == "0.1.0" && d.Status.DecodeCaps != nil {
 				return true
 			}
 		}

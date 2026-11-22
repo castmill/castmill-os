@@ -116,7 +116,7 @@ curl -s localhost:8081/devices | jq
 curl -s -X POST localhost:8081/pair -d '{"code":"ABC-123"}'
 curl -s -X POST localhost:8081/devices/dev-0002/command -d '{"command":"screenshot"}'
 curl -s -X POST localhost:8081/devices/dev-0002/desired \
-  -d '{"version":"2026.11.1-dev","bundle_url":"https://10.0.2.2:8443/bundles/castmill-os-bundle-genericarm64.raucb","activate_policy":"now"}'
+  -d '{"version":"0.1.1-dev.1","bundle_url":"https://10.0.2.2:8443/bundles/castmill-os-bundle-genericarm64.raucb","activate_policy":"now"}'
 curl -s -X POST localhost:8081/devices/dev-0002/config -d '{"timezone":"Europe/Madrid","maintenance_windows":[{"start":"03:00","end":"05:00"}]}'
 ```
 

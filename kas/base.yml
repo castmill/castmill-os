@@ -24,7 +24,7 @@ target:
 
 # Passed through to bitbake (CI sets them; the defaults suit local builds).
 env:
-  CASTMILL_VERSION: "2026.11.0-dev"
+  CASTMILL_VERSION: "0.1.0-dev"
   CASTMILL_KEYS_DIR: ""
 
 repos:

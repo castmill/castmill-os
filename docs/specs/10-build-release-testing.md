@@ -14,9 +14,15 @@ The repository is hosted on **GitHub** (Enterprise Cloud organization). **GitHub
 
 ## Versioning
 
-- OS version: `YYYY.MM.PATCH` (for example `2027.03.2`); git tags `vYYYY.MM.PATCH`, release candidates `vYYYY.MM.PATCH-rc.N`.
-- The image manifest records the Electron, player, kernel and Mesa versions.
-- Branches: `main` (development) and `release/YYYY.MM` (maintenance for security and patch releases).
+- OS version: [Semantic Versioning 2.0.0](https://semver.org/) `MAJOR.MINOR.PATCH`, starting at `0.1.0`. Git tags `vX.Y.Z`; release candidates `vX.Y.Z-rc.N`.
+  - **MAJOR:** breaking changes for devices or integrators, for example an incompatible device API, a disk layout change that needs a reinstall, a `castmill.conf` format change, or dropping supported hardware.
+  - **MINOR:** new features, new hardware support, Electron/Chromium feature upgrades.
+  - **PATCH:** bug fixes and security fixes only.
+  - While the version is `0.y.z`, breaking changes bump MINOR. `1.0.0` is the v1.0 release from the roadmap.
+- The next version follows from the [Conventional Commits](https://www.conventionalcommits.org/) since the last tag: `feat` → MINOR, `fix` → PATCH, `!` or a `BREAKING CHANGE:` footer → MAJOR (see [CONTRIBUTING.md](../../CONTRIBUTING.md#commit-messages)).
+- Untagged builds get a pre-release version from `scripts/version.sh`, for example `0.1.1-dev.5.g1a2b3c4` (5 commits after `v0.1.0`). Pre-release identifiers instead of `+build` metadata keep the version valid in `os-release`.
+- The image manifest records the Electron, player, kernel and Mesa versions. Components in this repository (`castmill-agent`, the kiosk shell) carry their own SemVer versions.
+- Branches: `main` (development) and `release/X.Y` (maintenance for security and patch releases of `X.Y`).
 
 ## CI/CD on GitHub Actions
 
@@ -51,7 +57,7 @@ The repository is public and open to outside contributions, so untrusted code mu
 
 | Workflow | Trigger | Runner | What it does |
 |---|---|---|---|
-| `checks.yml` ✅ | every PR, push | standard | Markdown link check, `actionlint`, `zizmor`, yamllint, shellcheck, kas config resolution (later: agent unit tests); to add: `reuse lint`, DCO sign-off check |
+| `checks.yml` ✅ | every PR, push | standard | Markdown link check, `actionlint`, `zizmor`, yamllint, shellcheck, kas config resolution (later: agent unit tests); Conventional Commits + DCO sign-off on PR commits (`scripts/check-commits.sh`); to add: `reuse lint` |
 | `build.yml` ✅ | push to `main`/`release/*`, internal PRs, manual | larger runners | kas build per target (`x86-64`, `rpi5`, `vm-arm64` dev image); images + SBOM uploaded as workflow artifacts |
 | `qemu-test.yml` | after `build.yml` | larger runners (KVM) | Boot the x86-64 image in QEMU: health check, A/B update, forced rollback, power-cut simulation |
 | `nightly.yml` | schedule (daily) | larger runners (static IP for the lab) | Full build from `main` → `nightly` channel → hardware lab suites |

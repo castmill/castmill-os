@@ -30,6 +30,29 @@ Signed-off-by: Your Name <you@example.com>
 
 Add it automatically with `git commit -s`. Pull requests without a sign-off on every commit can't be merged.
 
+## Commit messages
+
+Every commit follows [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) and carries a DCO sign-off:
+
+```
+<type>(<scope>)!: <summary>
+
+<body: what and why>
+
+Signed-off-by: Your Name <you@example.com>
+```
+
+- **type:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore` or `revert`.
+- **scope** (optional): the area changed, for example `agent`, `player`, `meta-castmill`, `kas`, `ci`, `docs`.
+- **breaking changes:** add `!` after the type/scope and explain in a `BREAKING CHANGE:` footer. For Castmill OS that includes device API changes, disk layout changes that need a reinstall, `castmill.conf` format changes and dropped hardware support.
+- Summary in the imperative ("add", not "added"), lower case, no trailing period, at most 100 characters.
+
+CI checks every commit of a pull request (`scripts/check-commits.sh`). Run it locally with `scripts/check-commits.sh origin/main HEAD`.
+
+## Versioning
+
+Castmill OS releases follow [Semantic Versioning 2.0.0](https://semver.org/) (see [spec 10](docs/specs/10-build-release-testing.md#versioning)). The commit types decide the next version: `feat` → minor, `fix` → patch, a breaking change → major (minor while the version is `0.y.z`). `scripts/version.sh` prints the version of the current commit.
+
 ## Third-party code
 
 - Don't copy code from other projects into this repository without checking that its license is compatible (MIT, BSD, Apache-2.0 and similar are fine; ask first for anything else).
