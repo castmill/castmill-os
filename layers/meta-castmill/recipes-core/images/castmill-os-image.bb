@@ -11,6 +11,9 @@ IMAGE_LINGUAS = ""
 
 # ext4 for the RAUC bundle (one slot image); wic for flashing/installing.
 IMAGE_FSTYPES:append = " ext4"
+# RAUC verity bundles need the slot image to be a whole number of 4 KiB
+# blocks; the default alignment (1 KiB) only gets there by chance.
+IMAGE_ROOTFS_ALIGNMENT = "4"
 
 # A/B disk layout and bootloader for UEFI targets (x86-64, vm-arm64).
 WKS_FILE:genericx86-64 = "castmill-efi-ab.wks.in"
