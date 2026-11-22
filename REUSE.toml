@@ -1,0 +1,26 @@
+# Machine-readable licensing for every file in this repository (https://reuse.software).
+# Integrators can check it with `reuse lint` or ingest it into their compliance tooling.
+# See docs/adr/0007-licensing.md
+
+version = 1
+
+# Default: build metadata, layers, recipes, kas files, scripts, CI.
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Castmill OS contributors"
+SPDX-License-Identifier = "MIT"
+
+# Castmill software that runs on the device.
+[[annotations]]
+path = ["agent/**", "player/**", "videod/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 The Castmill OS contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Documentation and specifications.
+[[annotations]]
+path = ["docs/**", "README.md", "CONTRIBUTING.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 The Castmill OS contributors"
+SPDX-License-Identifier = "CC-BY-4.0"

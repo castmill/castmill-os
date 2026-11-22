@@ -138,10 +138,18 @@ castmill-os/
 
 ## Contributing
 
-The project is at the specification and prototype stage. Issues and pull requests on GitHub are very welcome. Larger decisions go in an ADR (see [`docs/adr/README.md`](docs/adr/README.md)).
+The project is at the specification and prototype stage. Issues and pull requests on GitHub are very welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Larger decisions go in an ADR (see [`docs/adr/README.md`](docs/adr/README.md)).
 
 Every pull request runs automated checks on GitHub Actions. Full image builds for pull requests from forks are started by a maintainer after review (see [Build, release and testing](docs/specs/10-build-release-testing.md#public-repository-safety-rules)).
 
 ## License
 
-To be decided (see [open questions](docs/specs/01-vision-and-requirements.md#open-questions)).
+Castmill OS uses permissive licenses so integrators and OEMs can adopt it easily ([ADR-0007](docs/adr/0007-licensing.md)):
+
+- build metadata, layers, recipes, scripts and CI: [MIT](LICENSE)
+- Castmill software running on the device (`agent/`, `player/`): [Apache-2.0](LICENSES/Apache-2.0.txt)
+- documentation and specifications: [CC BY 4.0](LICENSES/CC-BY-4.0.txt)
+
+Per-file licensing is declared in [`REUSE.toml`](REUSE.toml). Images also contain third-party packages under their own licenses; every release publishes the license manifest, SBOM and corresponding source. "Castmill" and the Castmill logo are trademarks and aren't covered by these licenses.
+
+Contributions are welcome under the [DCO](CONTRIBUTING.md#developer-certificate-of-origin-dco); see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Castmill OS kiosk shell: one Electron process per display output, hosting the Castmill player.",
   "main": "app/main.js",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "scripts": {
     "check": "node --check app/main.js && node --check app/preload.js && node --check app/status.js && node --test test/*.test.js",
     "test": "node --test test/*.test.js"

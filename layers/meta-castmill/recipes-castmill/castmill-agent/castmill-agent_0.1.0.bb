@@ -3,9 +3,11 @@ DESCRIPTION = "Enrollment, backend connection, A/B updates through RAUC, \
 maintenance windows, health checks, remote commands and telemetry. \
 See docs/specs/07-device-management.md."
 HOMEPAGE = "https://github.com/castmill/castmill-os"
-# TODO: set to the project license (open question in spec 01) plus the
-# licenses of the Go modules (MIT, ISC, BSD-2-Clause, BSD-3-Clause).
-LICENSE = "CLOSED"
+# Agent code: Apache-2.0 (ADR-0007). Vendored Go modules: MIT, ISC,
+# BSD-2-Clause, BSD-3-Clause.
+# TODO: add per-module LIC_FILES_CHKSUM entries (generated licenses .inc).
+LICENSE = "Apache-2.0 & MIT & ISC & BSD-2-Clause & BSD-3-Clause"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/Apache-2.0;md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 GO_IMPORT = "github.com/castmill/castmill-os/agent"
 

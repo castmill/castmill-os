@@ -2,8 +2,10 @@ SUMMARY = "Castmill OS kiosk shell for the Castmill player"
 DESCRIPTION = "Electron app (one process per output) that shows the pairing \
 screen, then the Castmill player, and reports frames, capabilities and \
 playback stats to castmill-agent. Source: player/ in this repository."
-# TODO: project license (open question in spec 01).
-LICENSE = "CLOSED"
+# Kiosk shell: Apache-2.0 (ADR-0007). The Castmill player web app (AGPL)
+# is loaded from the backend at runtime and is not part of this package.
+LICENSE = "Apache-2.0"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/Apache-2.0;md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 FILESEXTRAPATHS:prepend := "${CASTMILL_REPO_DIR}:${THISDIR}/files:"
 SRC_URI = " \

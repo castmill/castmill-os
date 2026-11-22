@@ -81,9 +81,17 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | DEV-003 | `build.yml` builds all targets and uploads images. | not run yet |
 | DEV-004 | `kas/dev.yml` → `castmill-dev` (SSH firewall rule), backend override allowed only there, red "DEVELOPMENT IMAGE" badge on screen. | parsed |
 
+## Licensing
+
+| ID | Status | Where | Verified |
+|---|---|---|---|
+| LIC-001 | `REUSE.toml` + `LICENSES/`; `reuse lint` passes. Not yet in CI (`checks.yml` job to add). | `REUSE.toml` | tested (locally) |
+| LIC-002 | – (`INCOMPATIBLE_LICENSE` not set yet; impact to check in Phase 0) | | |
+| LIC-003 | – (release pipeline) | | |
+
 ## Known gaps and decisions to make
 
-- **License** (spec 01, open question 1): the agent and player recipes use `LICENSE = "CLOSED"` as a placeholder.
+- **License checksums for Go modules**: licensing is decided ([ADR-0007](adr/0007-licensing.md)); the agent recipe still needs per-module `LIC_FILES_CHKSUM` entries for its Go dependencies.
 - **Backend endpoint and CA**: `CASTMILL_BACKEND_URL` / `CASTMILL_BACKEND_CA` and the player URL are placeholders.
 - **Castmill player integration**: the kiosk shell loads the configured player URL. How the Castmill player authenticates the device (and whether it should use the agent's identity) needs to be agreed with the player team.
 - **Fallback screen** when the player can't start: the status page is part of the player process; a native fallback (spec 07) is still to do.

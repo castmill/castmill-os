@@ -9,7 +9,8 @@ The repository is hosted on **GitHub** (Enterprise Cloud organization). **GitHub
 - Yocto 6.0 "Wrynose" LTS, configured with **kas**: `kas/x86-64.yml`, `kas/rpi5.yml`, `kas/vm-arm64.yml` (development VM), plus the `kas/dev.yml` overlay. The same kas files are used locally and in CI. Builds run in the official kas container (`kas-container`), so the host needs only Docker.
 - The **shared state (sstate) cache and downloads** are kept in the **GitHub Actions cache**, with the repository's cache limit raised above the free 10 GB (paid per GB). Without a cache, Yocto builds don't fit the CI time limit. If cache entries turn out to be too large or slow, move sstate to object storage (decide in Phase 0).
 - Reproducible builds enabled; build outputs are content-addressed.
-- Build outputs per target: disk image + bmap, RAUC bundle, installer (x86), SBOM (SPDX), CVE report, license manifest.
+- Build outputs per target: disk image + bmap, RAUC bundle, installer (x86), SBOM (SPDX), CVE report, license manifest, source archive of GPL/LGPL packages (Yocto `archiver` class).
+- Production builds set `INCOMPATIBLE_LICENSE` to exclude GPL-3.0/LGPL-3.0/AGPL-3.0 packages (ADR-0007); development images may include them.
 
 ## Versioning
 
@@ -50,7 +51,7 @@ The repository is public and open to outside contributions, so untrusted code mu
 
 | Workflow | Trigger | Runner | What it does |
 |---|---|---|---|
-| `checks.yml` ✅ | every PR, push | standard | Markdown link check, `actionlint`, `zizmor`, yamllint, shellcheck, kas config resolution (later: agent unit tests) |
+| `checks.yml` ✅ | every PR, push | standard | Markdown link check, `actionlint`, `zizmor`, yamllint, shellcheck, kas config resolution (later: agent unit tests); to add: `reuse lint`, DCO sign-off check |
 | `build.yml` ✅ | push to `main`/`release/*`, internal PRs, manual | larger runners | kas build per target (`x86-64`, `rpi5`, `vm-arm64` dev image); images + SBOM uploaded as workflow artifacts |
 | `qemu-test.yml` | after `build.yml` | larger runners (KVM) | Boot the x86-64 image in QEMU: health check, A/B update, forced rollback, power-cut simulation |
 | `nightly.yml` | schedule (daily) | larger runners (static IP for the lab) | Full build from `main` → `nightly` channel → hardware lab suites |
@@ -70,8 +71,9 @@ tag vX.Y.Z(-rc.N)
    │             · keys in HSM/cloud KMS, accessed via OIDC; RAUC and Secure Boot signing over PKCS#11
    ├─ 4. Attest  ──► build provenance (actions/attest-build-provenance) for every artifact
    ├─ 5. Publish
-   │     · GitHub Release: images (.img.xz + .bmap), x86 installer, SBOM, CVE report,
-   │       SHA256SUMS (signed), release notes
+   │     · GitHub Release: images (.wic.zst + .bmap), x86 installer, SBOM, CVE report,
+   │       license manifest, SHA256SUMS (signed), release notes
+   │     · GPL/LGPL source archives (object storage, linked from the release)
    │     · RAUC bundles → object storage / CDN
    │     · Register the release manifest in the Castmill backend (channel: canary for -rc, beta for final)
    │     · Update the Raspberry Pi Imager repository JSON (final releases only)

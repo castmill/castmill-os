@@ -14,6 +14,7 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [ ] Development VM booting on Apple Silicon Mac (`scripts/run-vm.sh`)
 - [ ] Pin layers with `kas lock`
 - [ ] Compositor decision (ADR-0004) and Intel VA-API driver source
+- [ ] Check impact of GPLv3-free production images (`INCOMPATIBLE_LICENSE`, ADR-0007)
 - [ ] Sway kiosk + Electron Castmill player booting to content on both
 - [ ] Video benchmark matrix (see [06](06-display-and-media.md)), comparing the Yocto image against Raspberry Pi OS with the same player and test videos:
   - Intel: VA-API 4K H.264/HEVC/VP9/AV1
@@ -45,6 +46,7 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [ ] CEC/DDC display power schedules
 - [ ] Power-cut and network chaos suites in the lab; 30-day soak gate
 - [ ] SBOM/CVE publication, `SECURITY.md`, advisory process
+- [ ] License compliance artifacts in releases (manifest + GPL/LGPL sources); trademark policy for the Castmill OS name and logo
 - [ ] **v1.0 release**
 
 ## Phase 3: Expansion

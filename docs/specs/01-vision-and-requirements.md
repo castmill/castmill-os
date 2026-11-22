@@ -108,6 +108,14 @@ IDs are stable and referenced from the other specs and tests.
 | DEV-003 | Images for every target are built in CI for every branch and can be downloaded with one command. | MUST |
 | DEV-004 | Development images (SSH, root login, debug tools) are clearly separated from production images and never production-signed. | MUST |
 
+### Licensing and compliance (see [ADR-0007](../adr/0007-licensing.md))
+
+| ID | Requirement | Level |
+|---|---|---|
+| LIC-001 | Every file in the repository has machine-readable licensing (REUSE compliant). | MUST |
+| LIC-002 | Production images contain no GPL-3.0, LGPL-3.0 or AGPL-3.0 packages, unless an ADR approves an exception. | MUST |
+| LIC-003 | Each release publishes the license manifest, SPDX SBOM and the corresponding source of all GPL/LGPL packages. | MUST |
+
 ## Non-functional targets
 
 These are initial targets. The prototype phase will validate them.
@@ -123,7 +131,7 @@ These are initial targets. The prototype phase will validate them.
 
 ## Open questions
 
-1. **License** for the OS repository and Castmill-specific components (align with Castmill's license?).
+1. ~~**License**~~ Decided: permissive licenses, GPLv3-free production images ([ADR-0007](../adr/0007-licensing.md)).
 2. **Standalone use:** will Castmill OS be usable without the Castmill backend, for example with other CMSs or by OEMs? This affects the update server choice ([ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md)).
 3. **Pi encryption:** is at-rest encryption on Raspberry Pi (no TPM) required, or is CM5 with eMMC the recommended secure Pi option?
 4. **Player delivery:** does the player ship only inside the OS image, or can its web assets update independently? (Current proposal: inside the image. See [02](02-system-architecture.md).)
