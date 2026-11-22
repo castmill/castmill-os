@@ -73,6 +73,8 @@ See [ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md) (status: propo
 
 ### Device API (sketch)
 
+> **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** the OS update API is added to the Castmill backend on top of the existing device token and device channel (release registry, desired version, status), not as a separate `/api/os/v1` service. Until then, updates are requested on the device with `castmill-agent update`. See [Castmill integration](../castmill-integration.md#os-updates).
+
 ```
 GET  /api/os/v1/devices/{id}/desired     → { version, bundle_url, security, activate_policy }
 POST /api/os/v1/devices/{id}/status      ← { slot_a, slot_b, booted, state, progress, last_error }

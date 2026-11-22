@@ -48,7 +48,7 @@ Settings: `CASTMILL_VM_MEM` (MB, default 4096), `CASTMILL_VM_CPUS` (default 4), 
 ### What the VM is good for
 
 - Boot, health check, A/B updates and **rollback** (install a bundle, reboot, force a failure)
-- Enrollment, `castmill-agent`, remote commands, maintenance windows
+- Pairing with Castmill, `castmill-agent`, remote commands, maintenance windows
 - Player behaviour, layouts, multiple outputs, display hotplug (QEMU monitor)
 - Network failure scenarios (QEMU network can be disconnected from the monitor)
 
@@ -59,47 +59,31 @@ Settings: `CASTMILL_VM_MEM` (MB, default 4096), `CASTMILL_VM_CPUS` (default 4), 
 
 For GPU-accelerated graphics in the VM, UTM's QEMU build supports `virtio-gpu-gl` through ANGLE/Metal. It's optional and not needed for functional testing.
 
-## Talk to the device: mock backend
+## Pair the device with Castmill
 
-The device needs a backend to pair with. For development, run the mock
-implementation of the [device API](device-api.md) on your Mac:
+Castmill OS runs Castmill's own device app, which pairs like any other Castmill player: it shows a pincode and a QR code, and you claim the screen in the Castmill dashboard. Each screen (output) is its own Castmill device. See [Castmill integration](castmill-integration.md).
+
+By default devices use the production backend, `https://castmill.net`. To develop against a local Castmill backend (from the [Castmill repository](https://github.com/castmill/castmill), port 4000), point a development image at it with `castmill.conf` on the boot partition. The `[backend]` section is ignored on production images:
 
 ```sh
-cd agent
-go run ./cmd/castmill-mock-backend --state ../.mock-backend --auto-approve \
-  --bundles ../.vm/bundles
+ssh -p 2222 root@localhost
+# on the device (development images: root, empty password)
+printf '[backend]\nurl = "http://10.0.2.2:4000"\n' > /boot/castmill.conf
+systemctl restart castmill-provision castmill-agent castmill-session
 ```
 
-Then tell the development image to use it. Create `castmill.conf` on the
-VM's boot partition (or in the image's `/boot` over SSH before the first
-enrollment) with the mock's CA:
-
-```toml
-[backend]
-url = "https://10.0.2.2:8443"     # the Mac, as seen from QEMU
-ca_cert_file = "server-ca.crt"    # copy of .mock-backend/server-ca.crt, next to castmill.conf
-```
-
-The `[backend]` section only works on development images; production images
-always use the built-in, pinned backend. `curl localhost:8081/devices` lists
-the paired devices; see [device API](device-api.md#mock-backend-development)
-for commands, configuration and updates.
+`10.0.2.2` is your Mac as seen from QEMU.
 
 ### Test an update and a rollback
 
-1. Build or download a second `vm-arm64` image with a different version and
-   put its `castmill-os-bundle-genericarm64.raucb` in `.vm/bundles`.
-2. Offer it: `curl -X POST localhost:8081/devices/<id>/desired -d '{"version":"<version>","bundle_url":"https://10.0.2.2:8443/bundles/castmill-os-bundle-genericarm64.raucb","activate_policy":"now"}'`.
-3. Watch the serial console: install → reboot into slot B → `castmill-health`
-   commits it (`castmill-agent status` on the device shows the result).
-4. Rollback: offer a bundle whose player can't start (or stop
-   `castmill-session.service` on the device during the trial boot). After the
-   health timeout the device marks the slot bad, reboots and reports
-   `rolled_back` with the reason.
+Until the Castmill backend manages OS versions, updates are requested on the device:
 
-Bundles are signed with the development keys of the build that produced them.
-A device only accepts bundles signed by the keyring it was built with, so
-use images and bundles from builds with the same `CASTMILL_KEYS_DIR`.
+1. Download a newer `vm-arm64` release and serve its `castmill-os-bundle-genericarm64.raucb` from your Mac, for example with `python3 -m http.server 8000` in the download directory.
+2. On the device: `castmill-agent update http://10.0.2.2:8000/castmill-os-bundle-genericarm64.raucb <version> --now`.
+3. Watch the serial console: install, reboot into slot B, then `castmill-health` commits it. `castmill-agent status` shows the result.
+4. Rollback: install a bundle whose player can't start, or stop `castmill-session.service` on the device during the trial boot. After the health timeout (10 minutes) the device marks the slot bad, reboots into slot A, and `castmill-agent status` shows `rolled_back` with the reason.
+
+A device only accepts bundles signed by the keyring it was built with. Use images and bundles from CI, which shares one development key set across builds.
 
 ## Test on real hardware
 
@@ -135,9 +119,8 @@ Usually unnecessary: CI builds every branch. If you need a local build:
 
 | Path | What | Test locally |
 |---|---|---|
-| `agent/` | `castmill-agent` (Go): enrollment, updates, health check, provisioning, commands | `cd agent && go test ./...` |
-| `agent/cmd/castmill-mock-backend` | Development backend | `go run ./cmd/castmill-mock-backend` |
-| `player/` | Electron kiosk shell (one process per output) | `cd player && npm run check` |
+| `agent/` | `castmill-agent` (Go): castmillOS bridge (native side), A/B updates, health check, provisioning | `cd agent && go test ./...` |
+| `player/` | Electron kiosk shell (one process per output) running Castmill's device app | `cd player && npm run check` |
 | `layers/meta-castmill/` | Yocto layer: distro, image, bundle, system integration | `kas-container shell kas/vm-arm64.yml -c "bitbake -g castmill-os-image"` |
 | `scripts/` | VM runner, dev keys, Go module pin check | `scripts/check-go-mods.sh` |
 

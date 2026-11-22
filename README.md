@@ -51,8 +51,8 @@ See [Hardware support](docs/specs/09-hardware-support.md).
 ```
 ┌───────────────────────────────────────────────────────────────────┐
 │ castmill-player@<output>          castmill-agent  (+ health check) │
-│ Electron kiosk shell, one per     enrollment · mTLS · updates ·    │
-│ screen, loads the Castmill player commands · telemetry             │
+│ kiosk shell, one per screen,      native side of the device app ·  │
+│ runs Castmill's device app        A/B updates · provisioning       │
 ├───────────────────────────────────────────────────────────────────┤
 │ Weston kiosk-shell (Wayland) · Mesa / KMS                          │
 ├───────────────────────────────────────────────────────────────────┤
@@ -70,9 +70,9 @@ See [Hardware support](docs/specs/09-hardware-support.md).
 
 - **Build system:** Yocto Project 6.0 "Wrynose" LTS, configured with kas; layer [`meta-castmill`](layers/meta-castmill). Dependencies are kept to the minimum the player needs (no X server, Vulkan, LLVM on the device, Rust, initramfs or package manager).
 - **Updates:** signed RAUC bundles streamed over HTTPS with adaptive downloads, installed into the inactive slot in the background. The agent activates them only inside the device's maintenance window; `castmill-health` commits the new slot or the bootloader rolls back.
-- **Device management:** [`castmill-agent`](agent) (Go, single binary) pairs with the Castmill backend (`https://castmill.net`) using a pairing code, then keeps an outbound mutual-TLS WebSocket for commands, configuration and telemetry. Protocol: [device API](docs/device-api.md).
+- **Castmill integration:** each screen runs Castmill's own device app from the backend (`https://castmill.net`), which pairs with a pincode and QR code and handles content, commands and telemetry like on every other Castmill platform. The kiosk shell gives it native OS access (device ID, device info, telemetry, reboot) through the `castmillOS` bridge, served by [`castmill-agent`](agent) (Go, single binary). See [Castmill integration](docs/castmill-integration.md) and [ADR-0008](docs/adr/0008-reuse-castmill-device-stack.md).
 - **Display:** Weston kiosk-shell; one Electron process per output, pinned to it by Wayland app ID. Hotplug, per-output mode and rotation from Castmill.
-- **Provisioning:** `castmill.conf` on the boot partition for Wi-Fi, proxy, NTP, time zone and zero-touch enrollment.
+- **Provisioning:** `castmill.conf` on the boot partition for Wi-Fi, proxy, NTP and time zone.
 - **Versions:** [SemVer](https://semver.org/) (`vX.Y.Z` tags); commits follow [Conventional Commits](https://www.conventionalcommits.org/) ([CONTRIBUTING](CONTRIBUTING.md#commit-messages)).
 - **CI/CD:** GitHub Actions: checks on every pull request, image builds for every push to `main`, and a development-signed pre-release for every version tag. Standard GitHub-hosted runners for now; larger runners, QEMU and hardware-lab tests and production signing come later ([spec 10](docs/specs/10-build-release-testing.md)).
 
@@ -97,12 +97,11 @@ kas-container build kas/vm-arm64.yml:kas/dev.yml
 Working on the agent or the player doesn't need Yocto:
 
 ```sh
-cd agent && go test ./...                    # castmill-agent, incl. an end-to-end test
-go run ./cmd/castmill-mock-backend --auto-approve   # development backend (device API)
-cd ../player && npm run check                # Electron kiosk shell
+cd agent && go test ./...                    # castmill-agent, incl. end-to-end bridge tests
+cd ../player && npm run check                # kiosk shell and castmillOS bridge
 ```
 
-See the [development guide](docs/development.md) for the mock backend, update and rollback tests, real hardware, local builds and limitations.
+See the [development guide](docs/development.md) for pairing with a local Castmill, update and rollback tests, real hardware, local builds and limitations.
 
 Cutting a test release:
 
@@ -126,7 +125,7 @@ git tag -s v0.1.0 -m "Castmill OS 0.1.0" && git push origin v0.1.0   # release.y
 | [09](docs/specs/09-hardware-support.md) | Hardware support |
 | [10](docs/specs/10-build-release-testing.md) | Build, release and testing |
 | [11](docs/specs/11-roadmap.md) | Roadmap |
-| [Device API](docs/device-api.md) | Agent ↔ Castmill backend protocol (draft v1) |
+| [Castmill integration](docs/castmill-integration.md) | How devices use Castmill's device app; the `castmillOS` bridge |
 | [Status](docs/implementation-status.md) | What is implemented, per requirement |
 | [Testing](docs/testing.md) | Trying a test release: VM, hardware, checklist |
 
@@ -146,15 +145,16 @@ castmill-os/
 ├── docs/
 │   ├── specs/          # specifications
 │   ├── adr/            # architecture decision records
-│   ├── device-api.md   # agent <-> backend protocol
+│   ├── castmill-integration.md # device app, castmillOS bridge, agent socket
+│   ├── testing.md      # trying a test release
 │   ├── implementation-status.md
 │   └── development.md  # development guide
 ├── kas/                # build configurations: x86-64, rpi5, vm-arm64, dev overlay
 ├── layers/
 │   └── meta-castmill/  # distro, image, RAUC bundle, A/B boot, system integration, recipes,
 │                       # boot logo (files/branding)
-├── agent/              # castmill-agent (Go) + development mock backend
-├── player/             # Electron kiosk shell hosting the Castmill player
+├── agent/              # castmill-agent (Go): bridge native side, updates, health, provisioning
+├── player/             # Electron kiosk shell running Castmill's device app
 ├── scripts/
 │   ├── run-vm.sh       # run the development VM on a Mac
 │   ├── gen-dev-keys.sh # development signing keys

@@ -14,7 +14,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | SEC-002 | RAUC verity bundles signed with X.509. Dev keys outside the repo; the device keyring comes from `CASTMILL_KEYS_DIR`. | `castmill-os-bundle.bb`, `rauc-conf.bbappend`, `scripts/gen-dev-keys.sh` | parsed |
 | SEC-003 | – (Phase 2: Secure Boot + UKI; Pi signed boot) | | |
 | SEC-004 | nftables: drop all inbound except established/related, ICMP errors, IPv6 ND, DHCPv6. SSH only on dev images. | `castmill.nft`, `castmill-dev` | parsed |
-| SEC-005 | Device key generated on the device (P-256), CSR enrollment, mTLS for every call, certificate renewal, revocation handling. | `agent/internal/identity`, `agent/internal/backend` | tested |
+| SEC-005 | **Revised by [ADR-0008](adr/0008-reuse-castmill-device-stack.md):** devices use Castmill's device token from pincode pairing (no per-device certificates or mTLS). Device ID: random, kept on `/data`, new after a factory reset. | Castmill device app, `agent/internal/agent` | tested (ID) |
 | SEC-006 | – (key on `/data`, 0600, agent user; TPM in Phase 2) | | |
 | SEC-007 | – (Phase 2) | | |
 | SEC-008 | Agent downloads and installs updates automatically; activation per maintenance window or security policy. | `agent/internal/updater` | tested |
@@ -41,7 +41,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | UPD-001 | RAUC A/B (ext4 slots) with the GRUB backend on UEFI targets. **Raspberry Pi 5: not yet** (tryboot vs U-Boot is a Phase 0 decision; the Pi image has the same partitions but no RAUC). | `rauc-conf.bbappend`, wks files | parsed |
 | UPD-002 | Installation streams into the inactive slot in the background; the player keeps running. | updater | tested (logic) |
 | UPD-003 | Maintenance windows (per day, crossing midnight, device time zone), "apply now", 24 h security policy. | `agent/internal/maintenance` | tested |
-| UPD-004 / 005 | Backend side (ADR-0005); the device reports the state it needs. | [device API](device-api.md) | – |
+| UPD-004 / 005 | Planned in the Castmill backend (ADR-0005, ADR-0008); until then `castmill-agent update` on the device. | [Castmill integration](castmill-integration.md#os-updates) | – |
 | UPD-006 | HTTP streaming with mTLS and adaptive updates (`block-hash-index`). | bundle recipe, agent | parsed |
 
 ## Display and media
@@ -52,16 +52,16 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | MED-002 / 003 / 004 | Platform Chromium flags (VA-API on Intel). **The Intel media driver (iHD) isn't in the image yet** (meta-intel decision, Phase 0). Benchmark matrix pending. | `castmill-player` recipe | – |
 | MED-005 | One player process per output, pinned by app ID; per-output mode, rotation and scale from Castmill. | `agent/internal/session`, `castmill-player@.service` | tested (config generation) |
 | MED-006 | – (Phase 2) | | |
-| MED-007 | The player reports GPU/decode info (`app.getGPUInfo`), and the agent forwards it in the device status. | `player/app/main.js` | tested (forwarding) |
+| MED-007 | Device info (OS, Electron, Chromium versions) goes to Castmill through the bridge; per-codec decode capabilities are not reported yet. | `player/app/bridge.js` | tested |
 
 ## Device management
 
 | ID | Status | Where | Verified |
 |---|---|---|---|
-| MGT-001 | Reboot, restart/reload player, screenshot (per output, by the player), log collection (journal, gzip, upload), status. | agent | tested |
+| MGT-001 | Through Castmill's device app and dashboard: restart app, reboot device (bridge → agent), refresh, clear cache, telemetry. Screenshots and log upload don't exist in Castmill yet. | `player/app/bridge.js`, agent | tested (bridge) |
 | MGT-002 | – (Phase 2) | | |
-| MGT-003 | The agent is a separate service; commands that don't need the player keep working. | agent | tested |
-| MGT-004 | CPU, memory, load, temperatures, Pi throttling, `/data` usage, eMMC wear, uptime, dropped frames. NVMe wear pending. | `agent/internal/telemetry`, player preload | tested |
+| MGT-003 | The agent is a separate service; the frame watchdog reloads and restarts a hung player. Remote access while the player is down needs Castmill support. | agent | tested |
+| MGT-004 | CPU usage and load, memory, `/data` usage, temperatures, network type, IP and Wi-Fi signal, uptime, in Castmill's `TelemetryData` format. Pi throttling, storage wear and dropped frames aren't in that format yet. | `agent/internal/telemetry` | tested |
 
 ## Installation and provisioning
 
@@ -69,7 +69,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 |---|---|---|---|
 | PRV-001 | – (x86 USB installer) | | |
 | PRV-002 | Pi image as `wic.zst` + `bmap` (flashable with bmaptool; Imager JSON later). | `kas/rpi5.yml` | parsed |
-| PRV-003 | Pairing code on screen; `castmill.conf` zero-touch with `org_token`. QR code pending. | agent, `player/app/status.*` | tested |
+| PRV-003 | Castmill's pincode and QR code on screen (Castmill device app). Zero-touch bulk enrollment with an organization token needs Castmill support. | Castmill device app | – |
 | PRV-004 | – | | |
 | PRV-005 | `castmill.conf`: Wi-Fi, proxy (+ CA), NTP, time zone; moved into `/data` and deleted from the boot partition. USB sticks need an automounter (not yet). Proxy CA isn't imported into Chromium yet. | `agent/internal/provision` | tested |
 
@@ -77,7 +77,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 
 | ID | Status | Verified |
 |---|---|---|
-| DEV-001 / 002 | `scripts/run-vm.sh` (2 outputs, watchdog); mock backend for pairing, commands and updates. | not booted yet |
+| DEV-001 / 002 | `scripts/run-vm.sh` (2 outputs, watchdog); pairing with castmill.net or a local Castmill backend; `castmill-agent update` for update and rollback tests. | not booted yet |
 | DEV-003 | `build.yml` builds all targets and uploads images. | not run yet |
 | DEV-004 | `kas/dev.yml` → `castmill-dev` (SSH firewall rule), backend override allowed only there, red "DEVELOPMENT IMAGE" badge on screen. | parsed |
 
@@ -92,8 +92,8 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 ## Known gaps and decisions to make
 
 - **License checksums for Go modules**: licensing is decided ([ADR-0007](adr/0007-licensing.md)); the agent recipe still needs per-module `LIC_FILES_CHKSUM` entries for its Go dependencies.
-- **Backend**: devices use the production backend `https://castmill.net`, which doesn't implement the [device API](device-api.md) (`/api/os/v1`) yet; use the mock backend until it does. The backend CA isn't pinned yet (system roots), and the default player URL is a placeholder until the backend sends one.
-- **Castmill player integration**: the kiosk shell loads the configured player URL. How the Castmill player authenticates the device (and whether it should use the agent's identity) needs to be agreed with the player team.
+- **Backend**: devices load Castmill's device app from `https://castmill.net`. `CastmillOSMachine` (native integration) needs the Castmill change to be deployed; without it devices pair and play as plain web players. The backend CA isn't pinned (system roots).
+- **OS updates from Castmill**: release registry, desired version, rollouts and status in the Castmill backend (follow-up to ADR-0008).
 - **Fallback screen** when the player can't start: the status page is part of the player process; a native fallback (spec 07) is still to do.
 - **Electron app ID on Wayland**: verify `app.setDesktopName` → app ID with Weston kiosk-shell on the first boot (ADR-0004).
 - **dm-verity**, erofs, Secure Boot, TPM, encrypted `/data`: Phase 1–2.

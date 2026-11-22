@@ -8,7 +8,7 @@ Goal: lower the main technical risks before committing to the full architecture.
 
 - [x] kas configuration for `x86-64`, `rpi5`, `vm-arm64` (Yocto 6.0 Wrynose) + minimal `meta-castmill` layer
 - [x] `checks.yml`, `build.yml`, CODEOWNERS, Dependabot (drafts)
-- [x] Initial implementation (v0.1): A/B layout with GRUB boot counting, RAUC config and bundle, read-only rootfs with `/data`, `castmill-agent` + `castmill-health` + provisioning, Weston kiosk session with the Electron kiosk shell, mock backend, [device API draft](../device-api.md). See [implementation status](../implementation-status.md).
+- [x] Initial implementation (v0.1): A/B layout with GRUB boot counting, RAUC config and bundle, read-only rootfs with `/data`, `castmill-agent` + `castmill-health` + provisioning, Weston kiosk session with the Electron kiosk shell. See [implementation status](../implementation-status.md).
 - [ ] GitHub repository with branch rulesets; larger-runner group `castmill-os-builders`; Actions cache limit raised
 - [ ] First green builds of all three targets; measure clean and cached build times (6-hour job limit)
 - [ ] Development VM booting on Apple Silicon Mac (`scripts/run-vm.sh`)
@@ -28,7 +28,9 @@ Goal: lower the main technical risks before committing to the full architecture.
 
 - [ ] Production images for x86-64 and Pi 5; read-only rootfs + dm-verity
 - [ ] RAUC A/B with `castmill-health` commit and rollback
-- [ ] `castmill-agent` v1: enrollment (pairing code), WebSocket, updates, maintenance windows, reboot, screenshot, logs, telemetry
+- [x] Reuse Castmill's device stack ([ADR-0008](../adr/0008-reuse-castmill-device-stack.md)): kiosk shell runs Castmill's device app; `castmillOS` bridge; `CastmillOSMachine` in Castmill
+- [ ] OS updates in the Castmill backend: release registry, desired version, channels and staged rollouts, update status
+- [ ] `castmill-agent` v1: updates, maintenance windows, telemetry, health (done in v0.1); screenshots and log upload as Castmill features
 - [ ] Multi-output (independent content), rotation
 - [ ] Per-device content profiles in the Castmill transcoder
 - [ ] Rollout engine v1 in the Castmill backend: channels, manual staged rollouts, status

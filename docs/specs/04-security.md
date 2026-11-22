@@ -28,6 +28,8 @@ Status: Draft v0.1 · Related: SEC-*
 
 ## Identity and secrets
 
+> **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** devices authenticate with Castmill's device token, obtained through Castmill's pincode pairing, instead of per-device certificates and mutual TLS. The plan below (device keys in the TPM, certificates) becomes a Castmill platform topic, for example binding the device token to a TPM-held key.
+
 - At first boot the agent generates a device key pair, **in the TPM** when present, otherwise on the encrypted `data` partition (or plain `data` on Pi without encryption).
 - Enrollment exchanges a pairing code or organization token for a **device certificate** signed by the Castmill device CA.
 - All backend communication uses mutual TLS with that certificate. Certificates are renewed automatically before expiry.

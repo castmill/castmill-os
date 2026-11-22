@@ -28,6 +28,8 @@ Target: under 3 minutes on NVMe or eMMC (PRV-001).
 
 ## First boot and enrollment
 
+> **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** pairing uses Castmill's pincode and QR code, shown by Castmill's device app; each screen is its own Castmill device. Zero-touch bulk enrollment with an organization token (`[enrollment]` in `castmill.conf`) needs Castmill support and is not available yet.
+
 1. The device boots and expands or creates `data`.
 2. Network: Ethernet with DHCP works with no setup. For Wi-Fi, see the configuration options below.
 3. The agent generates the device identity and contacts Castmill.

@@ -19,6 +19,7 @@ Short documents that record significant decisions, their context and their conse
 | [0005](0005-update-rollout-in-castmill-backend.md) | Update rollout engine in the Castmill backend | Proposed |
 | [0006](0006-github-actions-ci.md) | GitHub and GitHub Actions for CI/CD | Accepted |
 | [0007](0007-licensing.md) | Licensing (MIT / Apache-2.0 / CC BY 4.0, GPLv3-free images) | Accepted |
+| [0008](0008-reuse-castmill-device-stack.md) | Reuse Castmill's device stack | Accepted |
 
 ## Template
 
