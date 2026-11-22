@@ -80,7 +80,7 @@ type Agent struct {
 // Defaults returns the built-in configuration.
 func Defaults() *Agent {
 	a := &Agent{}
-	a.Backend.URL = "https://os.castmill.io"
+	a.Backend.URL = "https://castmill.net"
 	a.Paths.DataDir = "/data/castmill"
 	a.Paths.RunDir = "/run/castmill-agent"
 	a.Paths.LogDir = "/data/log/castmill"

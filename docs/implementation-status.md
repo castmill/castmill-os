@@ -92,7 +92,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 ## Known gaps and decisions to make
 
 - **License checksums for Go modules**: licensing is decided ([ADR-0007](adr/0007-licensing.md)); the agent recipe still needs per-module `LIC_FILES_CHKSUM` entries for its Go dependencies.
-- **Backend endpoint and CA**: `CASTMILL_BACKEND_URL` / `CASTMILL_BACKEND_CA` and the player URL are placeholders.
+- **Backend**: devices use the production backend `https://castmill.net`, which doesn't implement the [device API](device-api.md) (`/api/os/v1`) yet; use the mock backend until it does. The backend CA isn't pinned yet (system roots), and the default player URL is a placeholder until the backend sends one.
 - **Castmill player integration**: the kiosk shell loads the configured player URL. How the Castmill player authenticates the device (and whether it should use the agent's identity) needs to be agreed with the player team.
 - **Fallback screen** when the player can't start: the status page is part of the player process; a native fallback (spec 07) is still to do.
 - **Electron app ID on Wayland**: verify `app.setDesktopName` → app ID with Weston kiosk-shell on the first boot (ADR-0004).
