@@ -42,7 +42,7 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 do_install() {
     install -d ${D}${nonarch_libdir}/castmill-player/app
     install -m 0644 ${S}/package.json ${D}${nonarch_libdir}/castmill-player/
-    for f in main.js preload.js agentlink.js bridge.js policy.js status.html status.css status.js; do
+    for f in main.js preload.js agentlink.js bridge.js policy.js gpu.js status.html status.css status.js; do
         install -m 0644 ${S}/app/$f ${D}${nonarch_libdir}/castmill-player/app/
     done
     install -D -m 0755 ${UNPACKDIR}/castmill-player ${D}${bindir}/castmill-player

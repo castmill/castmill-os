@@ -68,6 +68,8 @@ type Agent struct {
 	displayKick  chan struct{}
 	schedules    map[string]display.Timers
 	displayPower map[string]*state.DisplayState
+
+	gpu map[string]state.GPUState // GPU reports per output
 }
 
 type recoveryState struct {
@@ -216,6 +218,8 @@ func (a *Agent) call(ctx context.Context, output, method string, args json.RawMe
 	switch method {
 	case "set_timers":
 		return nil, a.setTimers(output, args)
+	case "gpu_report":
+		return nil, a.gpuReport(output, args)
 	case "machine_id":
 		// One Castmill device per output: independent content per screen (MED-005).
 		return a.machineID + "-" + output, nil
@@ -390,7 +394,8 @@ func (a *Agent) publish() {
 	outs := map[string]state.OutputState{}
 	for name, c := range conn {
 		_, att := attached[name]
-		outs[name] = state.OutputState{Connected: c, Player: att, LastFrame: a.player.LastFrame(name)}
+		outs[name] = state.OutputState{Connected: c, Player: att, LastFrame: a.player.LastFrame(name),
+			GPU: a.gpuSnapshot(name)}
 	}
 	a.rt.Outputs = outs
 	a.rt.Display = map[string]state.DisplayState{}

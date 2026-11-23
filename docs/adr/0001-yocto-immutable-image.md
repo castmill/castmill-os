@@ -22,5 +22,5 @@ Build Castmill OS with the **Yocto Project 6.0 "Wrynose" LTS** (supported until 
 - Steeper learning curve and longer clean builds (shared-state caching is needed).
 - Full control over contents, size, security hardening and SBOM.
 - Since Yocto 6.0 there's no combined "poky" repository; kas pulls bitbake, OE-core and meta-yocto separately.
-- Board support: `meta-raspberrypi` (Wrynose branch available) and OE-core/meta-yocto generic machines for x86-64 and the arm64 dev VM. `meta-intel` has no Wrynose branch on its GitHub mirror, so the Intel VA-API driver may need its own recipe in `meta-castmill`.
+- Board support: `meta-raspberrypi` (Wrynose branch available) and OE-core/meta-yocto generic machines for x86-64 and the arm64 dev VM. The Intel VA-API driver (`intel-media-driver`, with `gmmlib`) comes from `meta-intel` (Wrynose branch on git.yoctoproject.org), used on x86-64 only and with the generic machine.
 - the Electron runtime has to be integrated as a recipe (packaging the prebuilt Electron release vs building Chromium is a Phase 0 task).

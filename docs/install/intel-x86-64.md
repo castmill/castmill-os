@@ -79,4 +79,4 @@ Intel devices have full A/B updates: a new version is installed in the backgroun
 ## Limitations in v0.1
 
 - Secure Boot, TPM-based disk encryption and dm-verity are planned, not available yet.
-- **No hardware video decoding yet.** VA-API needs the Intel media driver, which isn't in the image yet. Video plays, decoded by the CPU.
+- **GPU acceleration is not yet verified on Intel hardware.** The image has Intel's GPU driver (Mesa `iris`) for rendering and CSS effects, and the Intel media driver for hardware video decoding (H.264, HEVC, VP9, AV1, depending on the GPU). On a development image, `castmill-agent status` shows per screen whether it renders on the GPU and which formats it decodes in hardware.

@@ -42,7 +42,7 @@ Prints the runtime state and the update state. The most useful fields:
 | `agent_version`, `device_name` | Version and device name |
 | `backend_url`, `backend_ok`, `backend_error` | The Castmill server, when it last answered, and the last error |
 | `time_trusted` | Whether the clock has been set from NTP or HTTPS |
-| `outputs` | Each output: connected, player attached, time of the last rendered frame |
+| `outputs` | Each output: connected, player attached, time of the last rendered frame, and `gpu`: `rendering` (`hardware` or `software`), the GL `renderer` and `video_decode`, the formats decoded in hardware |
 | `display` | Each scheduled output: `power` (`on`/`off`), when it last changed, the `method` used (`cec`, `ddc` or `none`) and the last `error`. See [Device schedule](../operate/device-schedule.md) |
 | `update.state` | See [update states](../operate/updates.md#update-states) |
 | `update.version`, `update.from_version`, `update.last_error` | The update and its outcome |

@@ -18,6 +18,28 @@ type OutputState struct {
 	Connected bool      `json:"connected"`
 	LastFrame time.Time `json:"last_frame,omitzero"`
 	Player    bool      `json:"player"` // a player instance is attached
+	// GPU is what the output's player reported about GPU acceleration.
+	GPU *GPUState `json:"gpu,omitempty"`
+}
+
+// Rendering modes in GPUState.
+const (
+	RenderingHardware = "hardware"
+	RenderingSoftware = "software"
+)
+
+// GPUState is a player's GPU acceleration, as Chromium sees it.
+type GPUState struct {
+	// Rendering is "hardware" when Chromium composites on the GPU,
+	// "software" when it fell back to the CPU.
+	Rendering string `json:"rendering"`
+	// Renderer is the GL renderer, e.g. "Mesa Intel(R) Graphics (ADL-N)".
+	Renderer string `json:"renderer,omitempty"`
+	// VideoDecode lists the codecs decoded in hardware, e.g. ["H.264", "HEVC"].
+	VideoDecode []string `json:"video_decode"`
+	// Features is Chromium's feature status (chrome://gpu), e.g.
+	// "gpu_compositing": "enabled".
+	Features map[string]string `json:"features,omitempty"`
 }
 
 // Display power states.

@@ -5,7 +5,7 @@ Status: Draft v0.1 · Related: MED-*, [ADR-0003](../adr/0003-electron-player-run
 ## Graphics stack
 
 - Kernel modesetting (KMS/DRM). **No X11.**
-- Mesa: `iris` (Intel Gen8+), `v3d`/`vc4` (Raspberry Pi).
+- Mesa: `iris` (Intel Gen8+) and `crocus` (Gen4–7), `v3d`/`vc4` (Raspberry Pi). Chromium renders pages, CSS effects, animations and WebGL on the GPU through Mesa (`--enable-gpu-rasterization`, `--ignore-gpu-blocklist`); without a working GPU driver it falls back to software rendering, which is much slower.
 - Wayland compositor in a locked-down kiosk configuration: **Sway** or **Weston kiosk-shell** (ADR-0004, decided in Phase 0).
 - Electron runs as a native Wayland client (`--ozone-platform=wayland`).
 
@@ -35,7 +35,7 @@ Status: Draft v0.1 · Related: MED-*, [ADR-0003](../adr/0003-electron-player-run
 ### Verification method (for every platform and Electron version)
 
 - `chrome://media-internals` → `video_decoder` name (hardware: `VaapiVideoDecoder` / `V4L2VideoDecoder`; software: `FFmpegVideoDecoder`, `Dav1dVideoDecoder`).
-- `app.getGPUInfo('complete')` → supported hardware decode profiles.
+- The kiosk shell's GPU report (`castmill-agent status` → `outputs.<name>.gpu`): `rendering` (`hardware`/`software`), the GL `renderer`, and `video_decode`, the formats Chromium's Media Capabilities API reports as power-efficient (hardware-decoded): H.264 1080p, HEVC, VP9 and AV1 at 4K. (`app.getGPUInfo()` isn't used: Electron keeps only one of the decode profiles.)
 - Decoder device in use by the GPU process (`lsof /dev/video*` / `/dev/dri/renderD*`).
 - CPU use and `HTMLVideoElement.getVideoPlaybackQuality().droppedVideoFrames` during a 10-minute playback.
 

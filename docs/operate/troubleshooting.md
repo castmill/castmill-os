@@ -48,6 +48,17 @@ The device needs the right time for HTTPS and schedules. It uses NTP and, when N
 
 The screen goes black at the off time, but the display stays on: the display doesn't accept HDMI-CEC or DDC/CI. Enable CEC or DDC/CI in the display's settings, then check with `castmill-agent display <output> off`. See [Device schedule](./device-schedule.md).
 
+### Animations stutter or video plays badly
+
+Check whether the player renders on the GPU. On a development image, `castmill-agent status` shows it for each screen under `outputs.<name>.gpu`, and the agent logs a warning when a player falls back to software rendering:
+
+```json
+"gpu": { "rendering": "hardware", "renderer": "Mesa Intel(R) Graphics (ADL-N)", "video_decode": ["H.264", "HEVC", "VP9", "AV1"] }
+```
+
+- `"rendering": "software"`: the GPU isn't used, so CSS effects, animations and video all run on the CPU. Report it with the hardware model.
+- A format missing from `video_decode` is decoded by the CPU. Use a format the device decodes in hardware, or a lower resolution.
+
 ### A widget shows the wrong city
 
 Weather and other location widgets show **London, United Kingdom** until you pick a location in the widget's settings in the Castmill dashboard. The device doesn't report where it is; see [Location](../castmill-integration.md#location).

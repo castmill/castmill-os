@@ -28,7 +28,7 @@ Castmill OS is built with the Yocto Project as a set of complete, signed system 
   - `meta-castmill`: distro configuration (`DISTRO = "castmill"`), image recipes, agent, kiosk configuration
   - `meta-castmill-x86`: UEFI, systemd-boot, signed unified kernel image (UKI), Secure Boot, TPM
   - `meta-castmill-rpi`: Pi boot firmware, A/B boot logic, signed boot
-- Upstream layers: `bitbake`, `openembedded-core`, `meta-yocto` (generic machines only), `meta-openembedded`, `meta-rauc`, `meta-raspberrypi`; to evaluate: Intel VA-API driver source, a layer providing Electron or Chromium (`meta-browser` has a Wrynose branch), compositor recipes (ADR-0004), `meta-security`.
+- Upstream layers: `bitbake`, `openembedded-core`, `meta-yocto` (generic machines only), `meta-openembedded`, `meta-rauc`, `meta-raspberrypi`; `meta-intel` (x86-64, Intel media driver only); to evaluate: a layer providing Electron or Chromium (`meta-browser` has a Wrynose branch), compositor recipes (ADR-0004), `meta-security`.
 - Builds are described with **kas** files so they are reproducible on any CI runner.
 - See [10](10-build-release-testing.md).
 

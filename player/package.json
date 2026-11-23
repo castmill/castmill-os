@@ -6,7 +6,7 @@
   "main": "app/main.js",
   "license": "Apache-2.0",
   "scripts": {
-    "check": "node --check app/main.js && node --check app/preload.js && node --check app/status.js && node --check app/bridge.js && node --check app/agentlink.js && node --check app/policy.js && node --test test/*.test.js",
+    "check": "node --check app/main.js && node --check app/preload.js && node --check app/status.js && node --check app/bridge.js && node --check app/agentlink.js && node --check app/policy.js && node --check app/gpu.js && node --test test/*.test.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {

@@ -49,10 +49,10 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | ID | Status | Where | Verified |
 |---|---|---|---|
 | MED-001 | Weston kiosk-shell on KMS/DRM, Electron as a native Wayland client. | `castmill-session`, `weston_%.bbappend` | parsed |
-| MED-002 / 003 / 004 | Platform Chromium flags (VA-API on Intel). **The Intel media driver (iHD) isn't in the image yet** (meta-intel decision, Phase 0). Benchmark matrix pending. | `castmill-player` recipe | – |
+| MED-002 / 003 / 004 | Intel: Mesa `iris` for GPU rendering (CSS, WebGL, compositing) and the Intel media driver (iHD, from `meta-intel`) for VA-API video decoding; Chromium flags per platform. Each player reports hardware or software rendering and the formats it decodes in hardware (`castmill-agent status`, journal). Benchmark matrix pending. | `mesa.bbappend`, `kas/x86-64.yml`, `castmill-player` recipe, `player/app/gpu.js` | tested (report); not yet on Intel hardware |
 | MED-005 | One player process per output, pinned by app ID; per-output mode, rotation and scale from Castmill. | `agent/internal/session`, `castmill-player@.service` | tested (config generation) |
 | MED-006 | Castmill's device schedule: the device app blanks the screen; the agent puts the display in standby over HDMI-CEC or DDC/CI and wakes it. Saved on `/data`, applied offline, accepted by the health check while displays are in standby. | `agent/internal/display`, `agent/internal/agent/display.go`, `player/app/bridge.js` | tested (schedule, encoding, VM without CEC/DDC); CEC and DDC/CI not yet on real displays |
-| MED-007 | Device info (OS, Electron, Chromium versions) goes to Castmill through the bridge; per-codec decode capabilities are not reported yet. | `player/app/bridge.js` | tested |
+| MED-007 | Device info (OS, Electron, Chromium versions) goes to Castmill through the bridge. Hardware-decoded formats are reported to the agent (`castmill-agent status`), not yet to Castmill. | `player/app/bridge.js` | tested |
 
 ## Device management
 

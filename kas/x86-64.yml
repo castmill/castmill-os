@@ -1,10 +1,8 @@
 # Castmill OS for Intel/AMD x86-64 mini PCs (UEFI).
 #
-# Uses the generic UEFI machine from meta-yocto-bsp.
-# TODO (Phase 0): VA-API needs the Intel media driver (iHD). meta-intel
-# has no Wrynose branch on its GitHub mirror, so decide between using
-# meta-intel from git.yoctoproject.org or carrying an intel-media-driver
-# recipe in meta-castmill.
+# Uses the generic UEFI machine from meta-yocto-bsp. meta-intel is added
+# only for the Intel media driver (VA-API video decoding, iHD) and gmmlib;
+# its machine-specific settings don't apply to genericx86-64.
 
 header:
   version: 14
@@ -12,6 +10,11 @@ header:
     - kas/base.yml
 
 machine: genericx86-64
+
+repos:
+  meta-intel:
+    url: https://git.yoctoproject.org/meta-intel
+    branch: wrynose
 
 # Also the installer stick (castmill-os-installer, spec 08).
 target:
@@ -25,3 +28,7 @@ local_conf_header:
     CASTMILL_KERNEL_CMDLINE = "quiet panic=10 console=tty0 console=ttyS0,115200"
     # GPU and Wi-Fi firmware for the reference mini PCs.
     CASTMILL_FIRMWARE = "linux-firmware-i915 linux-firmware-iwlwifi linux-firmware-ibt linux-firmware-rtl8168"
+    # Hardware video decoding for Intel GPUs from Broadwell (Gen 8) on:
+    # H.264, HEVC, VP9, AV1 (depending on the GPU). Chromium uses it through
+    # VA-API (libva).
+    CASTMILL_VIDEO_DRIVERS = "intel-media-driver"

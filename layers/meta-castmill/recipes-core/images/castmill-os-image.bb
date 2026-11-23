@@ -37,14 +37,16 @@ IMAGE_INSTALL = " \
     ${@'rauc grub-editenv' if d.getVar('CASTMILL_AB') == '1' else ''} \
     networkmanager networkmanager-nmcli wpa-supplicant \
     ca-certificates tzdata \
-    weston mesa-megadriver \
+    weston mesa-megadriver ${CASTMILL_VIDEO_DRIVERS} \
     liberation-fonts \
     ${@'castmill-dev' if d.getVar('CASTMILL_DEV_IMAGE') == '1' else ''} \
     ${CORE_IMAGE_EXTRA_INSTALL} \
 "
 
-# Firmware per hardware family (set in the kas target files).
+# Firmware and VA-API video drivers per hardware family (set in the kas
+# target files).
 CASTMILL_FIRMWARE ??= ""
+CASTMILL_VIDEO_DRIVERS ??= ""
 
 SYSTEMD_DEFAULT_TARGET = "graphical.target"
 

@@ -20,6 +20,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { AgentLink } = require('./agentlink');
 const { MachineBridge } = require('./bridge');
+const { probeGPU } = require('./gpu');
 const { decideView, isNavigationAllowed, isTrustedBridgeSender, outputFromArgv } = require('./policy');
 
 const OUTPUT = outputFromArgv(process.argv);
@@ -211,7 +212,26 @@ agent.on('connect', () => {
   // The agent keeps the schedule across reboots, but may have missed changes.
   const timers = bridge?.readSettings().TIMERS;
   if (timers !== undefined) sendTimers(timers);
+  if (gpuReport) sendGPUReport();
 });
+
+// GPU report: hardware or software rendering, and the video formats decoded
+// in hardware. Probed once the GPU process has started.
+const GPU_PROBE_DELAY_MS = 10_000;
+let gpuReport = null;
+function sendGPUReport() {
+  agent.call('gpu_report', gpuReport).catch((err) => log('GPU report not sent to the agent:', err.message));
+}
+function reportGPU() {
+  probeGPU({ app, BrowserWindow })
+    .then((r) => {
+      gpuReport = r;
+      log(`GPU: ${r.rendering} rendering (${r.renderer || 'unknown renderer'}),`,
+        `hardware video decoding: ${r.video_decode.join(', ') || 'none'}`);
+      if (agent.connected) sendGPUReport();
+    })
+    .catch((err) => log('GPU probe failed:', err.message));
+}
 
 // Device schedule: the device app blanks the screen at the scheduled times;
 // the agent also puts the display in standby (HDMI-CEC or DDC/CI).
@@ -263,6 +283,7 @@ app.whenReady().then(() => {
   createWindow();
   showStatus({ reason: 'starting' });
   agent.start();
+  setTimeout(reportGPU, GPU_PROBE_DELAY_MS);
 });
 
 // The process lives as long as its window; systemd restarts it.
