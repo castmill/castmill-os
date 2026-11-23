@@ -33,6 +33,6 @@ do_deploy() {
 }
 addtask deploy after do_install before do_build
 
-FILES:${PN} += "/mnt"
+FILES:${PN} += "${datadir}/castmill /mnt"
 # The installer runs as init with BusyBox: blkid -L, blockdev --rereadpt, zstd.
 RDEPENDS:${PN} = "busybox zstd util-linux-blkid util-linux-blockdev"
