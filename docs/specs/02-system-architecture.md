@@ -74,7 +74,7 @@ Everything writable lives under `/data`. Bind mounts and `systemd-tmpfiles` map 
 
 ## Boot flow
 
-1. Firmware → bootloader with A/B slot selection and boot counting (systemd-boot boot counting on x86-64, `tryboot` or U-Boot bootcount on Pi; to be decided in the prototype).
+1. Firmware → bootloader with A/B slot selection and boot counting (GRUB boot counting on x86-64, the firmware's `tryboot` on Pi, [ADR-0009](../adr/0009-raspberry-pi-tryboot.md)).
 2. Kernel + initramfs → dm-verity setup for the selected slot → unlock `data` (TPM) → switch root.
 3. systemd → network, time sync, compositor, player, agent.
 4. **Health check** (`castmill-health.service`, see [05](05-reliability.md)) → `rauc status mark-good` → boot counter reset.

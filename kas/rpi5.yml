@@ -7,9 +7,10 @@ header:
 
 machine: raspberrypi5
 
-# The RAUC bundle needs A/B boot, which is still a Phase 0 decision on Pi 5.
+# A/B updates with the firmware's tryboot (ADR-0009).
 target:
   - castmill-os-image
+  - castmill-os-bundle
 
 repos:
   meta-raspberrypi:
@@ -22,7 +23,13 @@ local_conf_header:
     LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
     # Two HDMI outputs, full KMS driver.
     VC4DTBO = "vc4-kms-v3d"
-    # GPT layout shared with the other targets (files/wic/castmill-rpi.wks.in).
-    CMDLINE_ROOTFS = "root=PARTUUID=${CASTMILL_UUID_ROOTFS_A} rootfstype=ext4 ro rootwait systemd.gpt_auto=0"
+    # A/B layout with tryboot (files/wic/castmill-rpi.wks.in, ADR-0009).
+    # cmdline.txt is for slot A; castmill-bootfs-install rewrites root= and
+    # rauc.slot= when it writes slot B's boot partition.
+    CMDLINE_ROOTFS = "root=PARTUUID=${CASTMILL_UUID_ROOTFS_A} rootfstype=ext4 ro rootwait"
+    CMDLINE_ROOTFS += "systemd.gpt_auto=0 rauc.slot=A"
+    # Partition 1 ("boot") only holds autoboot.txt; boot_a gets the boot files.
+    IMAGE_BOOT_FILES_label-boot = "castmill-autoboot.txt;autoboot.txt"
+    WICVARS:append = " IMAGE_BOOT_FILES_label-boot"
     CASTMILL_FIRMWARE = "linux-firmware-rpidistro-bcm43455 bluez-firmware-rpidistro-bcm4345c0-hcd"
-    # TODO (Phase 0): A/B boot (tryboot vs U-Boot) and signed boot.
+    # TODO: signed boot (Phase 2).

@@ -1,0 +1,139 @@
+#!/bin/sh
+# castmill-tryboot: RAUC custom bootloader backend for the Raspberry Pi 5
+# firmware's tryboot A/B boot (ADR-0009).
+#
+# autoboot.txt on the first FAT partition selects the boot partition:
+#   [all]      boot_partition = the committed slot
+#   [tryboot]  boot_partition = the slot to try once, after `reboot "0 tryboot"`
+# Arming a trial writes "0 tryboot" to /run/systemd/reboot-param, which systemd
+# passes to the kernel on the next reboot. /run is a tmpfs, so a power cut
+# forgets it and the committed slot boots (REL-005).
+#
+# RAUC calls: get-primary | set-primary SLOT | get-state SLOT |
+#             set-state SLOT good|bad | get-current
+set -eu
+
+CONF="${CASTMILL_TRYBOOT_CONF:-/usr/lib/castmill/tryboot.conf}"
+# shellcheck source=/dev/null
+. "$CONF"
+AUTOBOOT="${AUTOBOOT:-/boot/autoboot.txt}"
+REBOOT_PARAM="${REBOOT_PARAM:-/run/systemd/reboot-param}"
+BAD_FILE="${BAD_FILE:-/data/rauc/tryboot-bad}"
+PROC_CMDLINE="${PROC_CMDLINE:-/proc/cmdline}"
+
+die() {
+    echo "castmill-tryboot: $*" >&2
+    exit 1
+}
+
+part_of() { # bootname -> partition number
+    case "$1" in
+    A) echo "$SLOT_A_PART" ;;
+    B) echo "$SLOT_B_PART" ;;
+    *) die "unknown slot '$1'" ;;
+    esac
+}
+
+slot_of() { # partition number -> bootname
+    case "$1" in
+    "$SLOT_A_PART") echo A ;;
+    "$SLOT_B_PART") echo B ;;
+    *) die "boot_partition=$1 is not a Castmill OS slot" ;;
+    esac
+}
+
+other() { if [ "$1" = A ]; then echo B; else echo A; fi; }
+
+# boot_partition of a section ("all" or "tryboot") in autoboot.txt.
+section_part() {
+    [ -r "$AUTOBOOT" ] || die "$AUTOBOOT not found"
+    awk -v want="[$1]" '
+        { sub(/\r$/, "") }
+        /^\[/ { sec = $0; next }
+        sec == want && /^boot_partition=/ { sub(/^boot_partition=/, ""); p = $0 }
+        END { if (p == "") exit 1; print p }
+    ' "$AUTOBOOT" || die "no boot_partition in [$1] of $AUTOBOOT"
+}
+
+committed() { slot_of "$(section_part all)"; }
+trial() { slot_of "$(section_part tryboot)"; }
+
+armed() { grep -qw tryboot "$REBOOT_PARAM" 2>/dev/null; }
+
+# Rewrites autoboot.txt: committed slot, trial slot.
+write_autoboot() {
+    tmp="$AUTOBOOT.new"
+    printf '[all]\ntryboot_a_b=1\nboot_partition=%s\n[tryboot]\nboot_partition=%s\n' \
+        "$(part_of "$1")" "$(part_of "$2")" >"$tmp"
+    sync
+    mv "$tmp" "$AUTOBOOT"
+    sync
+}
+
+is_bad() { grep -qx "$1" "$BAD_FILE" 2>/dev/null; }
+
+set_bad() {
+    mkdir -p "$(dirname "$BAD_FILE")"
+    { grep -vx "$1" "$BAD_FILE" 2>/dev/null || true; } >"$BAD_FILE.new"
+    [ "$2" = 1 ] && echo "$1" >>"$BAD_FILE.new"
+    mv "$BAD_FILE.new" "$BAD_FILE"
+}
+
+current() {
+    s="$(tr ' ' '\n' <"$PROC_CMDLINE" | sed -n 's/^rauc\.slot=//p' | head -n 1)"
+    [ -n "$s" ] || die "no rauc.slot= on the kernel command line"
+    echo "$s"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+get-primary)
+    if armed; then trial; else committed; fi
+    ;;
+set-primary)
+    slot="${2:-}"
+    part_of "$slot" >/dev/null
+    if [ "$slot" = "$(committed)" ]; then
+        rm -f "$REBOOT_PARAM"
+    else
+        write_autoboot "$(committed)" "$slot"
+        mkdir -p "$(dirname "$REBOOT_PARAM")"
+        echo "0 tryboot" >"$REBOOT_PARAM"
+    fi
+    ;;
+get-state)
+    slot="${2:-}"
+    part_of "$slot" >/dev/null
+    if is_bad "$slot"; then echo bad; else echo good; fi
+    ;;
+set-state)
+    slot="${2:-}"
+    state="${3:-}"
+    part_of "$slot" >/dev/null
+    case "$state" in
+    good)
+        set_bad "$slot" 0
+        # Commit a slot that booted as a trial.
+        if [ "$slot" = "$(current)" ] && [ "$slot" != "$(committed)" ]; then
+            write_autoboot "$slot" "$(other "$slot")"
+        fi
+        ;;
+    bad)
+        set_bad "$slot" 1
+        if armed && [ "$(trial)" = "$slot" ]; then rm -f "$REBOOT_PARAM"; fi
+        # Never leave a bad slot committed while the other one is usable.
+        o="$(other "$slot")"
+        if [ "$(committed)" = "$slot" ] && ! is_bad "$o"; then
+            write_autoboot "$o" "$slot"
+        fi
+        ;;
+    *) die "state must be good or bad" ;;
+    esac
+    ;;
+get-current)
+    current
+    ;;
+*)
+    die "usage: $0 get-primary|set-primary SLOT|get-state SLOT|set-state SLOT good|bad|get-current"
+    ;;
+esac

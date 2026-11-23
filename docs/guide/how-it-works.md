@@ -16,17 +16,18 @@ A tour of what runs on a Castmill OS device and why. The full design is in the [
 ├───────────────────────────────────────────────────────────────────┤
 │ Linux kernel · read-only rootfs                                    │
 ├───────────────────────────────────────────────────────────────────┤
-│ GRUB A/B with boot counting (UEFI) · Raspberry Pi firmware         │
+│ GRUB A/B with boot counting (UEFI) · Pi firmware tryboot A/B       │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
 ## The disk
 
-Every target uses the same GPT layout:
+Every target uses the same GPT layout (the Raspberry Pi has two more boot partitions):
 
 | Partition | Contents | Mounted |
 |---|---|---|
-| `boot` | FAT. GRUB and its A/B state (UEFI), or the Pi firmware. Holds `castmill.conf` and the `factory-reset` flag. | `/boot` |
+| `boot` | FAT. GRUB and its A/B state (UEFI), or the Pi's `autoboot.txt`. Holds `castmill.conf` and the `factory-reset` flag. | `/boot` |
+| `boot_a`, `boot_b` | Raspberry Pi only, FAT: kernel, device trees and `config.txt` of each slot (the Pi firmware can't read the system partitions). | – |
 | `rootfs_a` | The system, slot A. | `/`, read-only |
 | `rootfs_b` | The system, slot B. Empty until the first update. | `/`, read-only |
 | `data` | Everything that changes: pairing, settings, cache, logs. Grown to fill the disk on first boot. | `/data` |
@@ -35,7 +36,7 @@ The system partitions are never written while they're running. Everything a devi
 
 ## Boot
 
-1. **Firmware and bootloader.** On UEFI machines GRUB picks the slot to boot from its A/B state and counts boot attempts. The Raspberry Pi firmware boots slot A directly (A/B on the Pi comes later).
+1. **Firmware and bootloader.** On UEFI machines GRUB picks the slot to boot from its A/B state and counts boot attempts. On the Raspberry Pi the firmware reads `autoboot.txt` and boots the committed slot, or the new slot once after an update (tryboot).
 2. **Console banner.** The Castmill OS logo appears with the version, the machine and the slot.
 3. **`castmill-data-setup`** checks `data`, grows it to the end of the disk the first time, and recreates it after a factory reset.
 4. **`castmill-provision`** applies a [`castmill.conf`](../setup/castmill-conf.md) if there's one on the boot partition or a USB stick: Wi-Fi, proxy, NTP, time zone.

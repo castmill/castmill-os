@@ -3,7 +3,7 @@
 Castmill OS updates the whole system at once and can always go back. An update never leaves a device half-updated or unbootable.
 
 ::: info Platforms
-A/B updates work on **Intel x86-64** devices and the **virtual machine**. On the Raspberry Pi 5 they come later; until then, flash the new image.
+A/B updates work on **Intel x86-64** devices, the **virtual machine** and the **Raspberry Pi 5** (new, not yet verified on a Pi). Pis flashed with v0.1.0 need to be flashed once with a newer image first.
 :::
 
 ## How an update works
@@ -22,7 +22,7 @@ A/B updates work on **Intel x86-64** devices and the **virtual machine**. On the
 1. **Download.** The agent streams a signed RAUC bundle over HTTPS. Bundles signed with other keys are rejected.
 2. **Install.** RAUC writes the new system to the inactive slot while the screens keep playing. A power cut at this point does no harm: the running slot isn't touched and the new one isn't activated yet.
 3. **Activate.** The device reboots into the new slot inside its **maintenance window**: 03:00–05:00 device-local time by default.
-4. **Trial boot.** GRUB boots the new slot with a counter of three attempts. If it doesn't come up, GRUB goes back to the previous slot.
+4. **Trial boot.** GRUB boots the new slot with a counter of three attempts; if it doesn't come up, GRUB goes back to the previous slot. The Raspberry Pi boots the new slot once (the firmware's tryboot): any reset during the trial boots the previous slot again.
 5. **Health check.** Within 10 minutes `castmill-health` must see the system services running, `data` mounted, every connected screen rendering frames and Castmill reachable. Then it commits the new slot. Otherwise it marks the slot bad and the device goes back to the previous version.
 
 A version that was rolled back isn't installed again. A network outage during the trial boot never causes a rollback, so a broken network at the site can't undo a good update.

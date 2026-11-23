@@ -40,7 +40,7 @@ Read [How it works](./how-it-works.md) for the details.
 | Tier | Hardware | Status in v0.1 |
 |---|---|---|
 | 1 | Intel N100/N150-class mini PCs (x86-64, UEFI) | Image builds; A/B updates |
-| 1 | Raspberry Pi 5 / Compute Module 5 | Image builds; A/B updates later |
+| 1 | Raspberry Pi 5 / Compute Module 5 | Image builds; A/B updates with the firmware's tryboot (to verify on a Pi) |
 | dev | arm64 virtual machine (QEMU on Apple Silicon Macs, arm64 Linux) | Development image |
 | 2 | Raspberry Pi 4, AMD mini PCs, Rockchip RK3588 | Later |
 

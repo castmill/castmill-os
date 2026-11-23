@@ -58,7 +58,7 @@ Claim each screen in the Castmill dashboard with its pincode. See [Pair with Cas
 
 ## Limitations in v0.1
 
-- **No A/B updates on the Pi yet.** The Pi always boots slot A, and the image doesn't include RAUC until A/B boot is implemented for the Pi firmware. To move to a new version, flash the new image; the device then has to be paired again.
+- **A/B updates on the Pi are new and not yet verified on a Pi.** They use the firmware's tryboot ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md)). Pis flashed with v0.1.0 have an older partition layout and can't take updates: flash them once with a newer image (the device then has to be paired again).
 - **No boot logo in the bootloader.** The logo shows on the console once Linux starts.
 - **Signed boot** (the Pi's equivalent of Secure Boot) is planned.
 

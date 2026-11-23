@@ -1,0 +1,60 @@
+#!/bin/sh
+# castmill-bootfs-install: RAUC post-install handler for the Raspberry Pi 5
+# (ADR-0009). The bundle only carries the root filesystem; this writes the
+# matching boot partition (kernel, device trees, overlays, config.txt,
+# cmdline.txt) from the new root filesystem's /usr/lib/castmill/boot, with
+# root= and rauc.slot= set for the target slot.
+#
+# Environment from RAUC: RAUC_TARGET_SLOTS, RAUC_SLOT_CLASS_<n>,
+# RAUC_SLOT_DEVICE_<n>, RAUC_SLOT_BOOTNAME_<n>.
+set -eu
+
+CONF="${CASTMILL_TRYBOOT_CONF:-/usr/lib/castmill/tryboot.conf}"
+# shellcheck source=/dev/null
+. "$CONF"
+WORK="${WORK:-/run/castmill-bootfs}"
+MKFS="${MKFS:-mkfs.vfat}"
+
+die() {
+    echo "castmill-bootfs-install: $*" >&2
+    exit 1
+}
+
+cleanup() {
+    umount "$WORK/root" 2>/dev/null || true
+    umount "$WORK/boot" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+for i in ${RAUC_TARGET_SLOTS:-}; do
+    eval "class=\${RAUC_SLOT_CLASS_$i:-}"
+    eval "device=\${RAUC_SLOT_DEVICE_$i:-}"
+    eval "bootname=\${RAUC_SLOT_BOOTNAME_$i:-}"
+    # shellcheck disable=SC2154  # set by eval
+    [ "$class" = rootfs ] || continue
+    # shellcheck disable=SC2154
+    case "$bootname" in
+    A) bootdev="$SLOT_A_BOOT" rootuuid="$SLOT_A_ROOT_UUID" ;;
+    B) bootdev="$SLOT_B_BOOT" rootuuid="$SLOT_B_ROOT_UUID" ;;
+    *) die "unknown slot '$bootname'" ;;
+    esac
+
+    mkdir -p "$WORK/root" "$WORK/boot"
+    # shellcheck disable=SC2154
+    mount -o ro "$device" "$WORK/root" || die "can't mount $device"
+    src="$WORK/root/usr/lib/castmill/boot"
+    [ -f "$src/cmdline.txt" ] || die "the new root filesystem has no boot files ($src)"
+
+    "$MKFS" -n "BOOT_$bootname" "$bootdev" >/dev/null || die "can't format $bootdev"
+    mount -t vfat "$bootdev" "$WORK/boot" || die "can't mount $bootdev"
+    cp -R "$src/." "$WORK/boot/"
+    sed -e "s|root=PARTUUID=[^ ]*|root=PARTUUID=$rootuuid|" \
+        -e "s|rauc\.slot=[^ ]*|rauc.slot=$bootname|" \
+        "$src/cmdline.txt" >"$WORK/boot/cmdline.txt"
+    grep -q "rauc.slot=$bootname" "$WORK/boot/cmdline.txt" ||
+        die "cmdline.txt has no rauc.slot="
+    sync
+    umount "$WORK/boot"
+    umount "$WORK/root"
+    echo "castmill-bootfs-install: boot partition of slot $bootname written ($bootdev)"
+done

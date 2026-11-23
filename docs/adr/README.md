@@ -20,6 +20,7 @@ Short documents that record significant decisions, their context and their conse
 | [0006](0006-github-actions-ci.md) | GitHub and GitHub Actions for CI/CD | Accepted |
 | [0007](0007-licensing.md) | Licensing (MIT / Apache-2.0 / CC BY 4.0, GPLv3-free images) | Accepted |
 | [0008](0008-reuse-castmill-device-stack.md) | Reuse Castmill's device stack | Accepted |
+| [0009](0009-raspberry-pi-tryboot.md) | A/B boot on Raspberry Pi 5 with the firmware's tryboot | Accepted |
 
 ## Template
 

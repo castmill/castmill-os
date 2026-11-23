@@ -38,7 +38,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 
 | ID | Status | Where | Verified |
 |---|---|---|---|
-| UPD-001 | RAUC A/B (ext4 slots) with the GRUB backend on UEFI targets. **Raspberry Pi 5: not yet** (tryboot vs U-Boot is a Phase 0 decision; the Pi image has the same partitions but no RAUC). | `rauc-conf.bbappend`, wks files | parsed |
+| UPD-001 | RAUC A/B (ext4 slots): GRUB with boot counting on UEFI targets; on the Raspberry Pi 5 the firmware's tryboot with one boot partition per slot ([ADR-0009](adr/0009-raspberry-pi-tryboot.md)). | `rauc-conf.bbappend`, wks files, `castmill-tryboot` | parsed; Pi backend tested (`scripts/test-tryboot.sh`), not yet on a Pi |
 | UPD-002 | Installation streams into the inactive slot in the background; the player keeps running. | updater | tested (logic) |
 | UPD-003 | Maintenance windows (per day, crossing midnight, device time zone), "apply now", 24 h security policy. | `agent/internal/maintenance` | tested |
 | UPD-004 / 005 | Planned in the Castmill backend (ADR-0005, ADR-0008); until then `castmill-agent update` on the device. | [Castmill integration](castmill-integration.md#os-updates) | – |

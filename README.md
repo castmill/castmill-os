@@ -60,7 +60,7 @@ See [Hardware support](docs/specs/09-hardware-support.md).
 ├───────────────────────────────────────────────────────────────────┤
 │ Linux kernel · read-only rootfs (dm-verity: planned)               │
 ├───────────────────────────────────────────────────────────────────┤
-│ GRUB A/B with boot counting (UEFI) · Pi firmware (A/B: planned)    │
+│ GRUB A/B with boot counting (UEFI) · Pi firmware tryboot A/B       │
 │ Secure Boot / Pi signed boot: planned                              │
 └───────────────────────────────────────────────────────────────────┘
  Disk (GPT):  [ boot ] [ rootfs_a ] [ rootfs_b ] [ data ]

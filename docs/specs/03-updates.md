@@ -90,6 +90,6 @@ Authentication: device mutual-TLS certificate (SEC-005). Alternatively, implemen
 
 ## Open questions
 
-- Exact boot-counting mechanism on Pi 5 (`tryboot` vs U-Boot).
+- ~~Exact boot-counting mechanism on Pi 5 (`tryboot` vs U-Boot).~~ Decided: `tryboot` ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md)).
 - Adaptive update chunk size vs CDN request limits.
 - Whether to also support a USB-stick offline update for air-gapped sites.

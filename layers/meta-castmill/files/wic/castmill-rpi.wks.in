@@ -1,11 +1,17 @@
-# Castmill OS disk layout for Raspberry Pi 5 / CM5. Same partitions as the
-# UEFI layout (spec 02) so /data, provisioning and factory reset work the same.
-# TODO (Phase 0): A/B boot (tryboot vs U-Boot, spec 03). Until then the
-# device always boots rootfs_a and RAUC is not installed.
+# Castmill OS disk layout for Raspberry Pi 5 / CM5 (ADR-0009). The firmware
+# reads autoboot.txt from the first FAT partition and boots boot_a or boot_b
+# (tryboot A/B). Partition 1 is also where castmill.conf and factory-reset
+# go, as on the other targets.
+# The partition numbers of boot_a (2) and boot_b (3) are in autoboot.txt and
+# castmill-tryboot's tryboot.conf; change them together.
 
 bootloader --ptable gpt
 
-part /boot --source bootimg_partition --fstype=vfat --label boot --part-name boot --uuid ${CASTMILL_UUID_BOOT} --active --align 4096 --fixed-size 256M --no-fstab-update
+part /boot --source bootimg_partition --fstype=vfat --label boot --part-name boot --uuid ${CASTMILL_UUID_BOOT} --active --align 4096 --fixed-size 64M --no-fstab-update
+
+part --source bootimg_partition --fstype=vfat --label boot_a --part-name boot_a --uuid ${CASTMILL_UUID_BOOT_A} --align 4096 --fixed-size 128M --no-fstab-update
+
+part --fstype=vfat --label boot_b --part-name boot_b --uuid ${CASTMILL_UUID_BOOT_B} --align 4096 --fixed-size 128M --no-fstab-update
 
 part --source rootfs --fstype=ext4 --label rootfs --part-name rootfs_a --uuid ${CASTMILL_UUID_ROOTFS_A} --align 4096 --fixed-size ${CASTMILL_SLOT_SIZE} --no-fstab-update
 

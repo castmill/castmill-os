@@ -21,7 +21,7 @@ Goal: lower the main technical risks before committing to the full architecture.
   - Intel: VA-API 4K H.264/HEVC/VP9/AV1
   - Pi 5: H.264 1080p/4K, HEVC 4K; confirm the decoder actually used
 - [ ] Quick test: GStreamer HEVC 4K into a Wayland surface below a transparent Electron window on Pi 5
-- [ ] RAUC A/B with boot counting on both platforms; decide Pi 5 `tryboot` vs U-Boot
+- [x] RAUC A/B on both platforms: GRUB boot counting (x86-64), firmware `tryboot` on Pi 5 ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md)); Pi to verify on hardware
 - [ ] RAM, image size and boot-time measurements against the NFR targets
 - [ ] **Output:** updated specs + accepted ADRs
 
