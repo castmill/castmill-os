@@ -48,6 +48,7 @@ Every call is checked by the main process. It must come from the window's **main
 | `removeCredentials` | – | kiosk shell | – |
 | `getMachineGUID` | – | agent | `<device id>-<output>`, stable until a factory reset |
 | `getDeviceInfo` | – | agent + kiosk shell | `{appType: "Castmill OS", appVersion, os, hardware, environmentVersion, chromiumVersion, v8Version, nodeVersion}`; the device app adds `userAgent` |
+| `getHardwareInfo` | – | agent + kiosk shell | `{cpu, memory, gpu, graphicsAcceleration: "hardware" \| "software", videoDecoding: ["H.264", …], display}`; waits up to 20 s for the GPU probe. Separate from `getDeviceInfo` because Castmill servers reject device info with unknown keys: only a device app that knows these fields asks for them (Castmill's `CastmillOSMachine` merges them into its device info) |
 | `getTelemetry` | – | agent | Castmill `TelemetryData`: storage (the data partition), memory, CPU usage and load, temperatures, network, uptime |
 | `getTimezone` | – | agent | IANA name, e.g. `Europe/Madrid` |
 | `reboot` | – | agent | reboots one second later |
@@ -94,7 +95,7 @@ Between the kiosk shell and `castmill-agent`, local only: `/run/castmill-agent/p
 |---|---|
 | shell → agent | `{"type":"hello","output":"HDMI-A-1"}` |
 | shell → agent | `{"type":"frame","output":"HDMI-A-1"}`: frame-rendered heartbeat (health check, watchdog) |
-| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
+| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `hardware_info` (`{cpu, memory}`), `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
 | agent → shell | `{"type":"reply","id":"7","ok":true,"data":{…}}` or `{"type":"reply","id":"7","error":"…"}` |
 | agent → shell | `{"type":"state","state":{"player_url","dev_image","os_version","device_name","online","backend_error"}}` |
 | agent → shell | `{"type":"reload"}`: no frames for 30 s (recovery layer 1, spec 05) |

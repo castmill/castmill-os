@@ -15,7 +15,7 @@
 // navigation limited to the player origin, the bridge answers only that
 // origin's main frame, permissions denied by default.
 
-const { app, BrowserWindow, ipcMain, session, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, session, powerSaveBlocker } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { AgentLink } = require('./agentlink');
@@ -216,21 +216,52 @@ agent.on('connect', () => {
 });
 
 // GPU report: hardware or software rendering, and the video formats decoded
-// in hardware. Probed once the GPU process has started.
-const GPU_PROBE_DELAY_MS = 10_000;
+// in hardware. Probed once the GPU process has started; sent to the agent and
+// shown in Castmill's device details (getHardwareInfo).
+const GPU_PROBE_DELAY_MS = 5_000;
+const GPU_REPORT_WAIT_MS = 20_000;
 let gpuReport = null;
+let gpuReady = null; // resolves with the report (or null if the probe failed)
 function sendGPUReport() {
   agent.call('gpu_report', gpuReport).catch((err) => log('GPU report not sent to the agent:', err.message));
 }
 function reportGPU() {
-  probeGPU({ app, BrowserWindow })
-    .then((r) => {
-      gpuReport = r;
-      log(`GPU: ${r.rendering} rendering (${r.renderer || 'unknown renderer'}),`,
-        `hardware video decoding: ${r.video_decode.join(', ') || 'none'}`);
-      if (agent.connected) sendGPUReport();
-    })
-    .catch((err) => log('GPU probe failed:', err.message));
+  gpuReady = new Promise((resolve) => {
+    setTimeout(() => {
+      probeGPU({ app, BrowserWindow })
+        .then((r) => {
+          gpuReport = r;
+          log(`GPU: ${r.rendering} rendering (${r.renderer || 'unknown renderer'}),`,
+            `hardware video decoding: ${r.video_decode.join(', ') || 'none'}`);
+          if (agent.connected) sendGPUReport();
+          resolve(r);
+        })
+        .catch((err) => {
+          log('GPU probe failed:', err.message);
+          resolve(null);
+        });
+    }, GPU_PROBE_DELAY_MS);
+  });
+}
+
+// GPU and display facts for getHardwareInfo, e.g. display
+// "HDMI-A-1, 3840 × 2160, 60 Hz".
+async function shellHardware() {
+  const r = await Promise.race([gpuReady, new Promise((res) => setTimeout(res, GPU_REPORT_WAIT_MS, null))]);
+  const out = {};
+  if (r) {
+    out.graphicsAcceleration = r.rendering;
+    if (r.renderer) out.gpu = r.renderer;
+    out.videoDecoding = r.video_decode;
+  }
+  if (win) {
+    const d = screen.getDisplayMatching(win.getBounds());
+    const w = Math.round(d.size.width * d.scaleFactor);
+    const h = Math.round(d.size.height * d.scaleFactor);
+    const hz = Math.round(d.displayFrequency || 0);
+    out.display = `${OUTPUT}, ${w} × ${h}${hz ? `, ${hz} Hz` : ''}`;
+  }
+  return out;
 }
 
 // Device schedule: the device app blanks the screen at the scheduled times;
@@ -279,11 +310,12 @@ app.whenReady().then(() => {
     restart: restartPlayer,
     clearCache: () => session.defaultSession.clearCache(),
     timersChanged: sendTimers,
+    hardware: shellHardware,
   });
   createWindow();
   showStatus({ reason: 'starting' });
   agent.start();
-  setTimeout(reportGPU, GPU_PROBE_DELAY_MS);
+  reportGPU();
 });
 
 // The process lives as long as its window; systemd restarts it.

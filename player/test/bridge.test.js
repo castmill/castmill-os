@@ -83,3 +83,40 @@ test('settings: schedule changes are forwarded once', async () => {
   await b.handle('setSetting', ['TIMER_OFF', 'true']);
   assert.deepStrictEqual(sent, [timers]);
 });
+
+test('hardware info: agent and kiosk shell facts, documented fields only', async () => {
+  const { b, calls } = bridge({
+    agentCall: async (m) => {
+      calls.push(m);
+      return { cpu: 'Intel N100 (4 cores)', memory: '8 GB', serial: 'not exposed' };
+    },
+    hardware: async () => ({
+      gpu: 'Mesa Intel(R) Graphics (ADL-N)',
+      graphicsAcceleration: 'hardware',
+      videoDecoding: ['H.264', 'HEVC', 42],
+      display: 'HDMI-A-1, 3840 × 2160, 60 Hz',
+      extra: 'dropped',
+    }),
+  });
+  assert.deepStrictEqual(await b.handle('getHardwareInfo'), {
+    cpu: 'Intel N100 (4 cores)',
+    memory: '8 GB',
+    gpu: 'Mesa Intel(R) Graphics (ADL-N)',
+    graphicsAcceleration: 'hardware',
+    display: 'HDMI-A-1, 3840 × 2160, 60 Hz',
+    videoDecoding: ['H.264', 'HEVC'],
+  });
+  assert.deepStrictEqual(calls, ['hardware_info']);
+});
+
+test('hardware info: partial when the agent or the GPU probe fails', async () => {
+  const { b } = bridge({
+    agentCall: async () => {
+      throw new Error('unknown method "hardware_info"'); // older agent
+    },
+    hardware: async () => ({ display: 'Virtual-1, 1920 × 1080' }),
+  });
+  assert.deepStrictEqual(await b.handle('getHardwareInfo'), { display: 'Virtual-1, 1920 × 1080' });
+  const { b: noShell } = bridge({ agentCall: async () => ({ memory: '4 GB' }) });
+  assert.deepStrictEqual(await noShell.handle('getHardwareInfo'), { memory: '4 GB' });
+});

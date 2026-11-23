@@ -24,6 +24,7 @@ const METHODS = new Set([
   'removeCredentials',
   'getTimezone',
   'getDeviceInfo',
+  'getHardwareInfo',
   'getTelemetry',
   'reboot',
   'restart',
@@ -55,14 +56,16 @@ class MachineBridge {
    * @param {() => void} o.restart  restart this player
    * @param {() => Promise<void>} o.clearCache  clear the browser's HTTP cache
    * @param {(timers: string) => void} [o.timersChanged]  the device schedule (TIMERS) changed
+   * @param {() => Promise<object>} [o.hardware]  GPU and display facts from the kiosk shell
    */
-  constructor({ dir, agentCall, versions, restart, clearCache, timersChanged }) {
+  constructor({ dir, agentCall, versions, restart, clearCache, timersChanged, hardware }) {
     this.dir = dir;
     this.agentCall = agentCall;
     this.versions = versions;
     this.restartFn = restart;
     this.clearCacheFn = clearCache;
     this.timersChangedFn = timersChanged;
+    this.hardwareFn = hardware;
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 
@@ -135,6 +138,15 @@ class MachineBridge {
           nodeVersion: v.node,
         };
       }
+      // Separate from getDeviceInfo: Castmill servers reject device info with
+      // keys they don't know, so only device apps that know these fields ask.
+      case 'getHardwareInfo': {
+        const [os, shell] = await Promise.all([
+          this.agentCall('hardware_info').catch(() => ({})),
+          this.hardwareFn ? this.hardwareFn().catch(() => ({})) : {},
+        ]);
+        return hardwareInfo({ ...os, ...shell });
+      }
       case 'restart':
         setImmediate(this.restartFn);
         return null;
@@ -144,6 +156,18 @@ class MachineBridge {
     }
     throw new Error(`unhandled method ${method}`);
   }
+}
+
+// Only the documented fields, as strings (videoDecoding: list of strings).
+function hardwareInfo(h) {
+  const out = {};
+  for (const k of ['cpu', 'memory', 'gpu', 'graphicsAcceleration', 'display']) {
+    if (typeof h[k] === 'string' && h[k] !== '') out[k] = h[k].slice(0, 200);
+  }
+  if (Array.isArray(h.videoDecoding)) {
+    out.videoDecoding = h.videoDecoding.filter((c) => typeof c === 'string').slice(0, 16);
+  }
+  return out;
 }
 
 module.exports = { MachineBridge, METHODS, SETTING_KEYS };

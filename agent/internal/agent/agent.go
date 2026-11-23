@@ -225,6 +225,8 @@ func (a *Agent) call(ctx context.Context, output, method string, args json.RawMe
 		return a.machineID + "-" + output, nil
 	case "device_info":
 		return a.deviceInfo(), nil
+	case "hardware_info":
+		return telemetry.ReadHardware(a.SysRoot), nil
 	case "telemetry":
 		a.mu.Lock()
 		defer a.mu.Unlock()

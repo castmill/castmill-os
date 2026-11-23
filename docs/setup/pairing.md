@@ -36,6 +36,7 @@ With Castmill OS support in Castmill's device app (`CastmillOSMachine`), the das
 | Feature | Details |
 |---|---|
 | **Device info** | App type "Castmill OS", OS version, hardware model, Chromium and Electron versions |
+| **Hardware** | Processor, memory, GPU, whether the screen is drawn by the GPU (graphics acceleration), the video formats decoded in hardware, and the display output and mode. Needs a Castmill version that shows them |
 | **Telemetry** | CPU usage and load, memory, storage of the `data` partition, temperatures, network type and signal, uptime |
 | **Commands** | Restart the player, reboot the device, clear the cache, refresh |
 | **Schedule** | On and off times: the screen goes black and the display goes to standby. See [Device schedule](../operate/device-schedule.md) |
