@@ -44,6 +44,10 @@ journalctl -b -u 'castmill-player@*'        # the kiosk shells, one per output
 
 The device needs the right time for HTTPS and schedules. It uses NTP and, when NTP is blocked, the time from Castmill's HTTPS responses. Set custom NTP servers and the time zone in [`[time]`](../setup/castmill-conf.md#time).
 
+### A widget shows the wrong city
+
+Weather and other location widgets show **London, United Kingdom** until you pick a location in the widget's settings in the Castmill dashboard. The device doesn't report where it is; see [Location](../castmill-integration.md#location).
+
 ### An update was rolled back
 
 `castmill-agent status` shows `rolled_back` with the reason in `last_error`, and the device keeps running the previous version. See [Updates and rollback](./updates.md).

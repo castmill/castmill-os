@@ -53,11 +53,11 @@ A QEMU window opens with **two virtual screens**, and the serial console stays i
      Castmill OS 0.1.0 - genericarm64 - slot A - DEVELOPMENT IMAGE
    ```
 
-2. Castmill's **pairing screen** on each virtual screen, with a pincode and a QR code.
+2. Castmill's **pairing screen** ("Register Your Device") on each virtual screen, with a registration code and a QR code. Switch between the two screens in QEMU's **View** menu.
 
 ## 4. Pair it
 
-Open the Castmill dashboard, add a device and enter the pincode shown on a screen. Each screen is its own Castmill device. See [Pair with Castmill](../setup/pairing.md).
+Open the Castmill dashboard, add a device and enter the registration code shown on a screen, or scan the QR code. Each screen is its own Castmill device. See [Pair with Castmill](../setup/pairing.md).
 
 ## Useful commands
 
@@ -67,4 +67,6 @@ castmill-agent status              # on the device: agent, outputs and update st
 scripts/run-vm.sh reset            # start again from a fresh, unpaired device
 ```
 
-The VM is good for checking boot, pairing, updates and rollbacks. It has no hardware video decoding, so test media performance on real hardware. More in [Virtual machine](../install/virtual-machine.md).
+The VM keeps its disk between runs, so a paired device stays paired. To try a newer image, run `fetch`, then `reset`, then `run`: without `reset` the VM boots the disk made from the previous image.
+
+The VM is good for checking boot, pairing, updates and rollbacks. It renders in software and has no hardware video decoding, so video plays slower than on a Raspberry Pi or Intel PC: test media performance on real hardware. More in [Virtual machine](../install/virtual-machine.md).

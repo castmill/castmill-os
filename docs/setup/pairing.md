@@ -39,6 +39,8 @@ With Castmill OS support in Castmill's device app (`CastmillOSMachine`), the das
 | **Telemetry** | CPU usage and load, memory, storage of the `data` partition, temperatures, network type and signal, uptime |
 | **Commands** | Restart the player, reboot the device, clear the cache, refresh |
 
+Devices don't report a location: Castmill OS has no location source yet. For widgets that need one, such as the weather widget, pick the location in the widget's settings. Setting a device's location in the dashboard is planned; see [Location](../castmill-integration.md#location).
+
 ::: info Older Castmill servers
 If the Castmill server you use doesn't have `CastmillOSMachine` yet, screens still pair and play, but as plain web players without the native features.
 :::

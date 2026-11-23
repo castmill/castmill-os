@@ -54,6 +54,10 @@ What's special on Castmill OS is the **`castmillOS` bridge**. The kiosk shell ex
 - reboot the device, restart the player, clear the cache
 - settings and credentials stored on `data`
 
+::: info Not Castmill's Electron player
+The kiosk shell runs on Electron, but it isn't Castmill's desktop Electron player (`packages/platforms/electron-player`). It's a small shell, a few hundred lines with no npm dependencies, that loads the hosted device app. Electron is part of the OS image and updates with it. Native features come from `castmill-agent`, and each screen gets its own player process.
+:::
+
 The bridge only answers the top-level page of the Castmill server the device loaded. Iframes and other sites can't reach it. The details, including every method, are in [Castmill integration](../castmill-integration.md).
 
 When the server can't be reached, the kiosk shell shows a local status page with the device name, the output, the OS version and the connection state, and tries again every 30 seconds. Once the device app has loaded, Castmill's service worker keeps it available offline.

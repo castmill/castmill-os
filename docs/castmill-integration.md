@@ -59,8 +59,22 @@ Not provided on purpose:
 - `update`: the shell is part of the OS image.
 - `updateFirmware`: OS updates come with the Castmill backend support (below).
 - `setOrientation`: the device app rotates content with CSS.
+- `getLocation`: see [Location](#location).
 
 Castmill's `@castmill/device` derives the device capabilities from the methods `CastmillOSMachine` implements.
+
+## Location
+
+Castmill OS devices register **without a location**: `CastmillOSMachine.getLocation()` returns nothing. The browser's geolocation (`navigator.geolocation`, which Castmill's Electron player uses) doesn't work here. On Linux, Chromium resolves it through Google's location service, which needs an API key and sends data about nearby networks to Google.
+
+Signage screens don't move, so the plan is to set the location **in the Castmill dashboard** instead:
+
+- Castmill already stores a location per device (`loc_lat`, `loc_long`) and accepts it in device updates. What's missing is a location field on the device page; the map picker that widget settings use can be reused there.
+- Location widgets (weather and others) should then default to the device's location. Today they default to London, United Kingdom, until a location is picked in the widget's settings.
+
+This is Castmill work and needs no change to Castmill OS.
+
+**Later: GPS.** Screens that move (buses, trains, taxis) need a live location. The agent can read it from a USB GNSS receiver or an LTE modem with GNSS (through `gpsd` or ModemManager) and report it with its telemetry. `getLocation` would then answer from it, and a live location would take precedence over the one set in the dashboard. Reporting a moving location would be opt-in per organisation. See the [roadmap](specs/11-roadmap.md#phase-3-expansion).
 
 ## Agent socket
 

@@ -93,6 +93,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 
 - **License checksums for Go modules**: licensing is decided ([ADR-0007](adr/0007-licensing.md)); the agent recipe still needs per-module `LIC_FILES_CHKSUM` entries for its Go dependencies.
 - **Backend**: devices load Castmill's device app from `https://castmill.net`. `CastmillOSMachine` (native integration) needs the Castmill change to be deployed; without it devices pair and play as plain web players. The backend CA isn't pinned (system roots).
+- **Device location**: devices register without one (`getLocation` returns nothing). The plan is to set it in the Castmill dashboard, which already stores `loc_lat` and `loc_long`. GPS for moving screens comes later ([Castmill integration](castmill-integration.md#location)).
 - **OS updates from Castmill**: release registry, desired version, rollouts and status in the Castmill backend (follow-up to ADR-0008).
 - **Fallback screen** when the player can't start: the status page is part of the player process; a native fallback (spec 07) is still to do.
 - **Electron app ID on Wayland**: verify `app.setDesktopName` → app ID with Weston kiosk-shell on the first boot (ADR-0004).

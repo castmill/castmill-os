@@ -57,4 +57,5 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [ ] Spanned outputs / video walls
 - [ ] Tier 2 hardware: Pi 4, AMD, RK3588
 - [ ] Network-boot installation; LTE modems
+- [ ] GPS/GNSS location for moving screens (USB receivers, LTE modems with GNSS): reported by the agent, answered by `getLocation`, opt-in per organisation. Fixed screens get their location from the Castmill dashboard ([Castmill integration](../castmill-integration.md#location)).
 - [ ] Live remote view (WebRTC)
