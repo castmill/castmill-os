@@ -34,7 +34,8 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [ ] Multi-output (independent content), rotation
 - [ ] Per-device content profiles in the Castmill transcoder
 - [ ] Rollout engine v1 in the Castmill backend: channels, manual staged rollouts, status
-- [ ] x86 USB installer, Pi images + Imager entry, `castmill.conf` bulk provisioning
+- [x] x86 USB installer (to verify on a real PC)
+- [ ] Pi images + Imager entry, `castmill.conf` bulk provisioning
 - [ ] `build.yml` + `qemu-test.yml` + `nightly.yml`; first hardware lab with self-hosted lab runners
 - [ ] `release.yml` with protected signing environment, GitHub Releases, provenance attestations and Castmill manifest registration
 - [ ] Pilot with internal and friendly-customer screens

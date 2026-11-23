@@ -12,17 +12,19 @@ Status: Draft v0.1 · Related: PRV-*
 | Target | Artifact | Tool |
 |---|---|---|
 | Raspberry Pi 5 / CM5 | `castmill-os-rpi-<ver>.img.xz` + `.bmap` | Raspberry Pi Imager (custom repository entry), bmaptool, Etcher; `rpiboot` for CM5 eMMC |
-| x86-64 | `castmill-os-x86-<ver>-installer.img` (USB) | Etcher / dd / Rufus |
+| x86-64 | `castmill-os-installer-genericx86-64.img.xz` + `.img.bmap` (USB stick) | Raspberry Pi Imager, balenaEtcher, Rufus, bmaptool |
 | x86-64 (bulk) | Network-boot installer (UEFI HTTP boot / PXE) | Customer or partner infrastructure |
 | x86-64 (factory) | Raw disk image + bmap | Pre-imaging by resellers |
 
 ## x86-64 USB installer
 
 1. Boot from USB (UEFI).
-2. The installer picks the internal disk automatically (largest non-removable disk, eMMC/NVMe preferred) and shows a **10-second countdown** with the disk model and size, then writes without asking. An "interactive" mode is available for multi-disk machines.
-3. Writes the disk image with `bmaptool` (only used blocks), verifies it, creates the `data` partition across the rest of the disk, enrolls Secure Boot keys when the firmware allows it, and sets the boot order.
-4. Copies a `castmill.conf` from the USB stick, if present (see below).
-5. Powers off. A "done" screen tells the installer to remove the USB stick.
+2. The installer checks the image on the stick, then picks the internal disk automatically: NVMe first, then eMMC, then SATA, the largest of the best kind; never the stick itself or another USB disk. It shows a **10-second countdown** with the disk model and size, then writes without asking. Pressing any key opens a menu to pick another disk (USB disks included, for PCs without an internal disk) or cancel.
+3. Writes the disk image with a progress percentage. The `data` partition is grown across the rest of the disk on the first boot (`castmill-data-setup`). Planned: enrolling Secure Boot keys when the firmware allows it, and setting the boot order (today the firmware boots the disk through its default `EFI/BOOT` path).
+4. Copies a `castmill.conf` (and the certificates next to it) from the stick, if present (see below).
+5. Shows a "done" screen telling the user to remove the stick, and powers off.
+
+The stick has three partitions: an ESP with GRUB and the kernel, a read-only installer system (BusyBox, `zstd` and `castmill-install` as init), and a FAT partition labelled `CASTMILL`. Windows and macOS show the `CASTMILL` partition as a drive; it holds the Castmill OS image, `README.txt` and `castmill.conf.example`.
 
 Target: under 3 minutes on NVMe or eMMC (PRV-001).
 

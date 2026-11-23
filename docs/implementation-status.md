@@ -67,7 +67,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 
 | ID | Status | Where | Verified |
 |---|---|---|---|
-| PRV-001 | – (x86 USB installer) | | |
+| PRV-001 | x86 USB installer stick: automatic disk choice with countdown, menu, progress, `castmill.conf` copy, power off. Secure Boot enrollment and boot-order setting not yet. | `castmill-os-installer.bb`, `castmill-installer` | shellcheck; not yet run on a PC |
 | PRV-002 | Pi image as `wic.zst` + `bmap` (flashable with bmaptool; Imager JSON later). | `kas/rpi5.yml` | parsed |
 | PRV-003 | Castmill's pincode and QR code on screen (Castmill device app). Zero-touch bulk enrollment with an organization token needs Castmill support. | Castmill device app | – |
 | PRV-004 | – | | |

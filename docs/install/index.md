@@ -21,14 +21,15 @@ Every version is published on the [GitHub releases page](https://github.com/cast
 | File | What it is |
 |---|---|
 | `castmill-os-image-raspberrypi5.rootfs.wic.zst` | Raspberry Pi 5 / CM5 disk image |
-| `castmill-os-image-genericx86-64.rootfs.wic.zst` | Intel / x86-64 disk image |
+| `castmill-os-installer-genericx86-64.img.xz` | Intel / x86-64 **installer stick**: write it to a USB stick and boot the PC from it |
+| `castmill-os-image-genericx86-64.rootfs.wic.zst` | Intel / x86-64 disk image, for writing a disk directly |
 | `castmill-os-image-genericarm64.rootfs.wic.zst` | arm64 development VM image (SSH, root login) |
 | `*.wic.bmap` | Block map, so `bmaptool` writes only the used blocks |
 | `castmill-os-bundle-<machine>.raucb` | Signed update bundle for devices already running Castmill OS |
 | `*.spdx.json` | Software bill of materials |
 | `SHA256SUMS` | Checksums of every file |
 
-The latest development build of `main` is also available as GitHub Actions artifacts (`image-rpi5`, `image-x86-64`, `image-vm-arm64`).
+The latest development build of `main` is also available as GitHub Actions artifacts (`image-rpi5`, `image-x86-64`, `image-vm-arm64`); the x86-64 artifact includes the installer.
 
 ::: warning Test releases
 Releases are currently signed with **development keys** and are meant for testing. Don't install them on screens in production yet.
