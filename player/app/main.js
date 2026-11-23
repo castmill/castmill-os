@@ -42,6 +42,9 @@ if (process.env.CASTMILL_USER_DATA) app.setPath('userData', path.join(process.en
 // No Electron auto-updater: the shell updates with the OS image (ADR-0003).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-features', 'Translate,MediaRouter');
+// HTML-in-canvas (experimental): widgets can draw live HTML elements into a
+// canvas, e.g. for WebGL effects on HTML content.
+app.commandLine.appendSwitch('enable-blink-features', 'CanvasDrawElement');
 
 function log(...a) {
   console.log(`[${OUTPUT}]`, ...a);
