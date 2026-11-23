@@ -10,4 +10,5 @@ fi
 # Electron must run as Electron, never as plain Node.js.
 unset ELECTRON_RUN_AS_NODE
 # shellcheck disable=SC2086  # one flag per word
-exec /usr/lib/electron/electron /usr/lib/castmill-player $FLAGS --castmill-output="$OUTPUT"
+# The app is /usr/lib/electron/resources/app (the castmill-player package).
+exec /usr/lib/electron/electron $FLAGS --castmill-output="$OUTPUT"

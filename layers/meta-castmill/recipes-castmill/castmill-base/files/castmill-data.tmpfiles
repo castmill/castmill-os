@@ -1,11 +1,11 @@
 # Castmill OS /data layout (spec 02 "Writable state").
 d /data/castmill                 0755 root   root   -
-d /data/castmill/identity        0700 agent  agent  -
+d /data/castmill/identity        0700 agent  castmill  -
 d /data/castmill/config          0755 root   root   -
 d /data/castmill/config/network  0700 root   root   -
-d /data/castmill/config/agent    0755 agent  agent  -
-d /data/castmill/state           0755 agent  agent  -
-d /data/castmill/player          0750 player player -
+d /data/castmill/config/agent    0755 agent  castmill  -
+d /data/castmill/state           0755 agent  castmill  -
+d /data/castmill/player          0750 player castmill -
 d /data/log                      0755 root   root   -
 d /data/log/castmill             0755 root   root   -
 d /data/log/journal              2755 root   systemd-journal -
@@ -13,4 +13,4 @@ d /data/rauc                     0755 root   root   -
 d /data/var-lib                  0755 root   root   -
 d /data/var-lib/systemd          0755 root   root   -
 d /data/var-lib/NetworkManager   0700 root   root   -
-L /data/castmill/config/agent/localtime - agent agent - /usr/share/zoneinfo/UTC
+L /data/castmill/config/agent/localtime - agent castmill - /usr/share/zoneinfo/UTC

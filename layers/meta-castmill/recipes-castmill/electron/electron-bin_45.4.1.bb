@@ -34,7 +34,8 @@ do_install() {
     install -d ${D}${libdir}/electron
     cp -R --no-preserve=ownership ${S}/. ${D}${libdir}/electron/
     # The default app and the setuid sandbox helper are not used: the player
-    # ships its own app, and Chromium sandboxes with user namespaces.
+    # installs itself as resources/app, and Chromium sandboxes with user
+    # namespaces.
     rm -f ${D}${libdir}/electron/resources/default_app.asar ${D}${libdir}/electron/chrome-sandbox
     chmod 0755 ${D}${libdir}/electron/electron ${D}${libdir}/electron/chrome_crashpad_handler
 }

@@ -16,12 +16,16 @@ Group=castmill
 # UID 901 = player (castmill-base).
 Environment=XDG_RUNTIME_DIR=/run/user/901
 Environment=WAYLAND_DISPLAY=wayland-castmill
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/901/bus
 Environment=CASTMILL_USER_DATA=/data/castmill/player
 Environment=CASTMILL_AGENT_SOCKET=/run/castmill-agent/player.sock
 Environment=CASTMILL_PLAYER_CONFIG=/data/castmill/config/agent/player.json
 EnvironmentFile=-/data/castmill/config/proxy.env
 ExecStart=/usr/bin/castmill-player %i
 Restart=always
+# Restart without passing through "failed": OnFailure= (the session restart)
+# then fires only when the start limit is hit, not on every crash.
+RestartMode=direct
 RestartSec=2
 
 # Least privilege (SEC-010). Chromium's own sandbox uses user namespaces,
@@ -30,7 +34,10 @@ NoNewPrivileges=yes
 CapabilityBoundingSet=
 ProtectSystem=strict
 ReadWritePaths=/data/castmill/player
-ProtectHome=yes
+# Hide /home, /root and /run/user except the player's runtime directory
+# (Wayland and D-Bus sockets).
+ProtectHome=tmpfs
+BindPaths=/run/user/901
 PrivateTmp=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes

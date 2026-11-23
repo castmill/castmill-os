@@ -34,4 +34,5 @@ do_install() {
 
 FILES:${PN} += "${libexecdir}/castmill ${systemd_system_unitdir} ${nonarch_base_libdir}/udev/rules.d"
 
-RDEPENDS:${PN} = "weston castmill-agent castmill-player castmill-base libpam pam-plugin-permit pam-plugin-loginuid"
+# kbd: chvt.
+RDEPENDS:${PN} = "weston castmill-agent castmill-player castmill-base libpam pam-plugin-permit pam-plugin-loginuid kbd"

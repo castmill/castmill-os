@@ -2,7 +2,8 @@
 Description=Castmill OS display session (Weston kiosk-shell)
 Documentation=https://github.com/castmill/castmill-os/blob/main/docs/specs/06-display-and-media.md
 After=systemd-user-sessions.service castmill-agent.service getty@tty7.service
-Wants=castmill-agent.service
+# castmill-outputs starts the players once the session is up (and on hotplug).
+Wants=castmill-agent.service castmill-outputs.service
 Conflicts=getty@tty7.service
 RequiresMountsFor=/data
 # Spec 05, recovery layer 3: a crash loop of the whole session reboots.
@@ -27,8 +28,11 @@ UtmpIdentifier=tty7
 UtmpMode=user
 Environment=XDG_SESSION_TYPE=wayland
 RuntimeDirectory=castmill-session
+# Show the session's VT: nothing else switches to it.
+ExecStartPre=+/usr/bin/chvt 7
 ExecStart=/usr/libexec/castmill/castmill-session
-ExecStartPost=+/usr/libexec/castmill/castmill-outputs
+# No ExecStartPost: every command of this unit hangs up tty7 first
+# (TTYVHangup), which would kill Weston with SIGHUP.
 Restart=always
 RestartSec=3
 WatchdogSec=60
