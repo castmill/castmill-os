@@ -59,6 +59,7 @@ Status: Draft v0.1 · Related: MED-*, [ADR-0003](../adr/0003-electron-player-run
 
 ## Display power
 
-- HDMI-CEC (`cec-ctl`) for on/off/standby and input switching, where the display supports it.
-- DDC/CI (`ddcutil`) for monitors that don't support CEC.
-- Schedules come from Castmill. The device keeps running while the screen is off.
+- HDMI-CEC for on/off/standby and input switching, where the display supports it.
+- DDC/CI (VCP power mode) for monitors that don't support CEC.
+- Both through the kernel interfaces (`/dev/cec*`, `/dev/i2c-*`) from `castmill-agent`, with no extra tools in the image.
+- Schedules come from Castmill (the device schedule). The device keeps running while the screen is off. See [Device schedule](../operate/device-schedule.md).

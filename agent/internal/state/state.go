@@ -20,6 +20,21 @@ type OutputState struct {
 	Player    bool      `json:"player"` // a player instance is attached
 }
 
+// Display power states.
+const (
+	PowerOn  = "on"
+	PowerOff = "off"
+)
+
+// DisplayState is the display power the device schedule set on one output.
+type DisplayState struct {
+	Power   string    `json:"power"`            // PowerOn or PowerOff
+	Since   time.Time `json:"since,omitzero"`   // scheduled change
+	Method  string    `json:"method,omitempty"` // "cec", "ddc", "none"
+	Error   string    `json:"error,omitempty"`
+	RetryAt time.Time `json:"-"`
+}
+
 // Runtime is published by the running agent.
 type Runtime struct {
 	Updated      time.Time              `json:"updated"`
@@ -30,7 +45,9 @@ type Runtime struct {
 	BackendError string                 `json:"backend_error,omitempty"`
 	TimeTrusted  bool                   `json:"time_trusted"`
 	Outputs      map[string]OutputState `json:"outputs,omitempty"`
-	Update       api.UpdateStatus       `json:"update"`
+	// Display is the scheduled display power per output (device schedule).
+	Display map[string]DisplayState `json:"display,omitempty"`
+	Update  api.UpdateStatus        `json:"update"`
 }
 
 // Update is the persistent update bookkeeping.

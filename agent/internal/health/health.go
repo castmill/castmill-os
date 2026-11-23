@@ -104,8 +104,20 @@ func (c *Checker) Check(ctx context.Context) []api.HealthCheck {
 		}
 	}
 	sort.Strings(connected)
+	// A display the device schedule put in standby may have disconnected
+	// (TVs often drop the HDMI hotplug line), e.g. during a night-time update.
+	var standby []string
+	if rtErr == nil {
+		for name, d := range rt.Display {
+			if d.Power == state.PowerOff && !outs[name] {
+				standby = append(standby, name)
+			}
+		}
+	}
+	sort.Strings(standby)
+	haveOutput := len(connected) > 0 || len(standby) > 0
 	if c.Cfg.Health.RequireOutput {
-		add("outputs", len(connected) > 0, "connected: %s", orNone(connected))
+		add("outputs", haveOutput, "connected: %s; in scheduled standby: %s", orNone(connected), orNone(standby))
 	}
 
 	// 4. Frame rendered on every connected output.
@@ -119,7 +131,7 @@ func (c *Checker) Check(ctx context.Context) []api.HealthCheck {
 			stale = append(stale, o)
 		}
 	}
-	add("frames", len(stale) == 0 && (len(connected) > 0 || !c.Cfg.Health.RequireOutput),
+	add("frames", len(stale) == 0 && (haveOutput || !c.Cfg.Health.RequireOutput),
 		"no recent frame on: %s", orNone(stale))
 
 	// 5. Backend reached, or the network is down for reasons outside the device.

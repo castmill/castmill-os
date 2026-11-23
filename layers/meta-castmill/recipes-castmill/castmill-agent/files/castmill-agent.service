@@ -29,7 +29,11 @@ ProtectSystem=strict
 ReadWritePaths=/data/castmill/identity /data/castmill/state /data/castmill/config/agent
 ProtectHome=yes
 PrivateTmp=yes
-PrivateDevices=yes
+# No devices except display power control (HDMI-CEC, DDC/CI over I2C) for
+# the device schedule; 60-castmill-display.rules gives them to this user.
+DevicePolicy=closed
+DeviceAllow=char-cec rw
+DeviceAllow=char-i2c rw
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes

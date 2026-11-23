@@ -103,6 +103,7 @@ const guideSidebar: DefaultTheme.SidebarItem[] = [
   {
     text: 'Operate',
     items: [
+      { text: 'Device schedule', link: '/operate/device-schedule' },
       { text: 'Updates and rollback', link: '/operate/updates' },
       { text: 'Factory reset', link: '/operate/factory-reset' },
       { text: 'Troubleshooting', link: '/operate/troubleshooting' },

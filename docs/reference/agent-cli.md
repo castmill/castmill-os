@@ -16,6 +16,7 @@ castmill-agent <command> [options]
 | `provision` | `castmill-provision.service` (root) | Applies [`castmill.conf`](../setup/castmill-conf.md) |
 | `update URL VERSION [--now]` | you | Requests an OS update from a RAUC bundle URL. See [Updates](../operate/updates.md). |
 | `session-config weston\|disabled` | the display session | Writes the compositor configuration |
+| `display OUTPUT on\|off` | you (root) | Switches a display over HDMI-CEC or DDC/CI, to check a display model. The [device schedule](../operate/device-schedule.md) does this by itself |
 | `status` | you | Prints the agent state as JSON |
 | `version` | you | Prints the agent version |
 
@@ -42,6 +43,7 @@ Prints the runtime state and the update state. The most useful fields:
 | `backend_url`, `backend_ok`, `backend_error` | The Castmill server, when it last answered, and the last error |
 | `time_trusted` | Whether the clock has been set from NTP or HTTPS |
 | `outputs` | Each output: connected, player attached, time of the last rendered frame |
+| `display` | Each scheduled output: `power` (`on`/`off`), when it last changed, the `method` used (`cec`, `ddc` or `none`) and the last `error`. See [Device schedule](../operate/device-schedule.md) |
 | `update.state` | See [update states](../operate/updates.md#update-states) |
 | `update.version`, `update.from_version`, `update.last_error` | The update and its outcome |
 
@@ -52,7 +54,7 @@ Prints the runtime state and the update state. The most useful fields:
 | `/etc/castmill/agent.toml` | Agent configuration, part of the image |
 | `/run/castmill-agent/player.sock` | Socket between the kiosk shells and the agent ([protocol](../castmill-integration.md#agent-socket)) |
 | `/run/castmill-agent/state.json` | Runtime state (memory only) |
-| `/data/castmill/state/` | Persistent state: device ID, update state, requested update |
+| `/data/castmill/state/` | Persistent state: device ID, update state, requested update, device schedule (`display-schedule.json`) |
 | `/data/castmill/config/` | Provisioning results and per-device configuration |
 
 The source is in [`agent/`](https://github.com/castmill/castmill-os/tree/main/agent).

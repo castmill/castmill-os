@@ -216,3 +216,28 @@ func TestNoRAUCIsReportOnly(t *testing.T) {
 		t.Fatalf("unexpected: %v %+v", err, out)
 	}
 }
+
+func TestTrialWithDisplaysInScheduledStandby(t *testing.T) {
+	// A night-time update: the only TV is in scheduled standby and dropped
+	// its HDMI hotplug line, so no output is connected.
+	e := newEnv(t)
+	e.trial("B")
+	write(t, filepath.Join(e.root, "sys/class/drm/card0-Virtual-1/status"), "disconnected\n")
+	e.runtime(func(r *state.Runtime) {
+		r.Outputs = nil
+		r.Display = map[string]state.DisplayState{"Virtual-1": {Power: state.PowerOff, Method: "cec"}}
+	})
+	out, _ := e.check.Run(context.Background(), false)
+	if out.NeedReboot || !out.Report.Committed {
+		t.Fatalf("scheduled standby must not cause a rollback: %+v", out.Report.Checks)
+	}
+
+	// Without the schedule, no output at all still fails.
+	e = newEnv(t)
+	e.trial("B")
+	write(t, filepath.Join(e.root, "sys/class/drm/card0-Virtual-1/status"), "disconnected\n")
+	e.runtime(func(r *state.Runtime) { r.Outputs = nil })
+	if out, _ := e.check.Run(context.Background(), false); !out.NeedReboot {
+		t.Fatalf("no output and no schedule must fail: %+v", out.Report.Checks)
+	}
+}

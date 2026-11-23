@@ -44,6 +44,10 @@ journalctl -b -u 'castmill-player@*'        # the kiosk shells, one per output
 
 The device needs the right time for HTTPS and schedules. It uses NTP and, when NTP is blocked, the time from Castmill's HTTPS responses. Set custom NTP servers and the time zone in [`[time]`](../setup/castmill-conf.md#time).
 
+### The screen doesn't turn off on schedule
+
+The screen goes black at the off time, but the display stays on: the display doesn't accept HDMI-CEC or DDC/CI. Enable CEC or DDC/CI in the display's settings, then check with `castmill-agent display <output> off`. See [Device schedule](./device-schedule.md).
+
 ### A widget shows the wrong city
 
 Weather and other location widgets show **London, United Kingdom** until you pick a location in the widget's settings in the Castmill dashboard. The device doesn't report where it is; see [Location](../castmill-integration.md#location).

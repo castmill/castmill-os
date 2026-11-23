@@ -1,0 +1,5 @@
+# Display power control by castmill-agent (device schedule, MED-006): HDMI-CEC
+# adapters, and I2C buses for DDC/CI (DRM links each connector's DDC bus;
+# udev can't tell those apart from other I2C buses).
+SUBSYSTEM=="cec", KERNEL=="cec[0-9]*", OWNER="agent", MODE="0600"
+SUBSYSTEM=="i2c-dev", OWNER="agent", MODE="0600"

@@ -21,6 +21,8 @@ SRC_URI = " \
     file://castmill-health-report.service \
     file://castmill-health-report.timer \
     file://castmill-provision.service \
+    file://60-castmill-display.rules \
+    file://castmill-display.conf \
 "
 require castmill-agent-go-mods.inc
 
@@ -61,11 +63,19 @@ do_install() {
              castmill-health-report.timer castmill-provision.service; do
         install -m 0644 ${UNPACKDIR}/$u ${D}${systemd_system_unitdir}/
     done
+
+    # Display power control (device schedule).
+    install -D -m 0644 ${UNPACKDIR}/60-castmill-display.rules \
+        ${D}${nonarch_base_libdir}/udev/rules.d/60-castmill-display.rules
+    install -D -m 0644 ${UNPACKDIR}/castmill-display.conf \
+        ${D}${nonarch_libdir}/modules-load.d/castmill-display.conf
 }
 do_install[vardeps] += "CASTMILL_BACKEND_URL CASTMILL_BACKEND_CA CASTMILL_DEV_IMAGE CASTMILL_COMPATIBLE"
 
 SYSTEMD_SERVICE:${PN} = "castmill-agent.service castmill-health.service castmill-health-report.timer castmill-provision.service"
 # castmill-health-report.service is started by its timer, not enabled itself.
-FILES:${PN} += "${systemd_system_unitdir}"
+FILES:${PN} += "${systemd_system_unitdir} ${nonarch_base_libdir}/udev/rules.d ${nonarch_libdir}/modules-load.d"
 
 RDEPENDS:${PN} = "castmill-base"
+# DDC/CI needs i2c-dev; built into the linux-yocto kernels (castmill.cfg).
+RRECOMMENDS:${PN} = "kernel-module-i2c-dev"

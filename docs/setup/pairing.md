@@ -38,6 +38,7 @@ With Castmill OS support in Castmill's device app (`CastmillOSMachine`), the das
 | **Device info** | App type "Castmill OS", OS version, hardware model, Chromium and Electron versions |
 | **Telemetry** | CPU usage and load, memory, storage of the `data` partition, temperatures, network type and signal, uptime |
 | **Commands** | Restart the player, reboot the device, clear the cache, refresh |
+| **Schedule** | On and off times: the screen goes black and the display goes to standby. See [Device schedule](../operate/device-schedule.md) |
 
 Devices don't report a location: Castmill OS has no location source yet. For widgets that need one, such as the weather widget, pick the location in the widget's settings. Setting a device's location in the dashboard is planned; see [Location](../castmill-integration.md#location).
 

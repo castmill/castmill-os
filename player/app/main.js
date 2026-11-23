@@ -206,7 +206,18 @@ agent.on('message', (m) => {
       break;
   }
 });
-agent.on('connect', () => log('connected to agent'));
+agent.on('connect', () => {
+  log('connected to agent');
+  // The agent keeps the schedule across reboots, but may have missed changes.
+  const timers = bridge?.readSettings().TIMERS;
+  if (timers !== undefined) sendTimers(timers);
+});
+
+// Device schedule: the device app blanks the screen at the scheduled times;
+// the agent also puts the display in standby (HDMI-CEC or DDC/CI).
+function sendTimers(timers) {
+  agent.call('set_timers', { timers }).catch((err) => log('schedule not sent to the agent:', err.message));
+}
 agent.on('disconnect', () => {
   log('agent connection lost');
   if (current.view === 'status') showStatus(lastStatus);
@@ -247,6 +258,7 @@ app.whenReady().then(() => {
     versions: process.versions,
     restart: restartPlayer,
     clearCache: () => session.defaultSession.clearCache(),
+    timersChanged: sendTimers,
   });
   createWindow();
   showStatus({ reason: 'starting' });
@@ -255,7 +267,10 @@ app.whenReady().then(() => {
 
 // The process lives as long as its window; systemd restarts it.
 app.on('window-all-closed', () => app.quit());
+// Stop (systemd signals only this process, KillMode=mixed): save storage and
+// exit at once; Electron ends its helper processes.
 process.on('SIGTERM', () => {
   agent.close();
-  app.quit();
+  session.defaultSession?.flushStorageData();
+  app.exit(0);
 });

@@ -42,7 +42,7 @@ Every call is checked by the main process. It must come from the window's **main
 | Method (`Machine`) | Arguments | Answered by | Result |
 |---|---|---|---|
 | `getSetting` | `key` | kiosk shell | value or `null`. Keys: `BASE_URL`, `TIMERS`, `TIMER_OFF`, `ORIENTATION` |
-| `setSetting` | `key, value` | kiosk shell | stored in the output's profile on `/data` (string, ≤ 64 KiB) |
+| `setSetting` | `key, value` | kiosk shell | stored in the output's profile on `/data` (string, ≤ 64 KiB). `TIMERS` is also sent to the agent ([Device schedule](#device-schedule)) |
 | `storeCredentials` | `credentials` | kiosk shell | stored with mode 0600 in the output's profile |
 | `getCredentials` | – | kiosk shell | string or `null` |
 | `removeCredentials` | – | kiosk shell | – |
@@ -62,6 +62,16 @@ Not provided on purpose:
 - `getLocation`: see [Location](#location).
 
 Castmill's `@castmill/device` derives the device capabilities from the methods `CastmillOSMachine` implements.
+
+## Device schedule
+
+Castmill's device schedule (on and off times per weekday) needs no Castmill change. `CastmillOSMachine` has no `setTimers`, so the device app uses its own timers, as on any platform without hardware timers:
+
+1. The device app stores the schedule with `setSetting("TIMERS", …)` and blanks the screen and stops playback at the off times.
+2. The kiosk shell sends every change of `TIMERS`, and the stored value whenever it connects, to the agent (`set_timers`).
+3. The agent saves the schedule on `/data` and puts the display in standby at the off times and wakes it at the on times, over HDMI-CEC or DDC/CI ([Device schedule](operate/device-schedule.md)).
+
+The agent evaluates the schedule itself, so a display whose player stopped (a TV that disconnects in standby) is still woken.
 
 ## Location
 
@@ -84,7 +94,7 @@ Between the kiosk shell and `castmill-agent`, local only: `/run/castmill-agent/p
 |---|---|
 | shell → agent | `{"type":"hello","output":"HDMI-A-1"}` |
 | shell → agent | `{"type":"frame","output":"HDMI-A-1"}`: frame-rendered heartbeat (health check, watchdog) |
-| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `telemetry`, `timezone`, `reboot` |
+| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`) |
 | agent → shell | `{"type":"reply","id":"7","ok":true,"data":{…}}` or `{"type":"reply","id":"7","error":"…"}` |
 | agent → shell | `{"type":"state","state":{"player_url","dev_image","os_version","device_name","online","backend_error"}}` |
 | agent → shell | `{"type":"reload"}`: no frames for 30 s (recovery layer 1, spec 05) |

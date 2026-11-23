@@ -73,3 +73,13 @@ test('app-level calls and unknown methods', async () => {
   await assert.rejects(b.handle('__proto__'), /unknown method/);
   await assert.rejects(b.handle('getSetting', 'BASE_URL'), /array/);
 });
+
+test('settings: schedule changes are forwarded once', async () => {
+  const sent = [];
+  const { b } = bridge({ timersChanged: (t) => sent.push(t) });
+  const timers = '{"on":[{"hours":8,"minutes":0,"weekDays":["ALL"]}],"off":[]}';
+  await b.handle('setSetting', ['TIMERS', timers]);
+  await b.handle('setSetting', ['TIMERS', timers]); // unchanged: not sent again
+  await b.handle('setSetting', ['TIMER_OFF', 'true']);
+  assert.deepStrictEqual(sent, [timers]);
+});

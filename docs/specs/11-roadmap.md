@@ -45,7 +45,7 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [ ] Pi 5/CM5 signed boot (optional) documentation and tooling
 - [ ] Automatic rollout halt; security release fast lane
 - [ ] Remote shell with auditing
-- [ ] CEC/DDC display power schedules
+- [x] CEC/DDC display power schedules (device schedule; to verify on real displays)
 - [ ] Power-cut and network chaos suites in the lab; 30-day soak gate
 - [ ] SBOM/CVE publication, `SECURITY.md`, advisory process
 - [ ] License compliance artifacts in releases (manifest + GPL/LGPL sources); trademark policy for the Castmill OS name and logo

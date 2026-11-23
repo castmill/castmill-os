@@ -11,6 +11,9 @@
 //	                           Castmill-driven OS updates come with the backend support)
 //	castmill-agent session-config weston|disabled
 //	                           compositor configuration for the display session
+//	castmill-agent display OUTPUT on|off
+//	                           switch a display over HDMI-CEC or DDC/CI (root; for
+//	                           checking hardware: the device schedule does this itself)
 //	castmill-agent status      print the agent state (for support / SSH on dev images)
 //	castmill-agent version
 package main
@@ -32,6 +35,7 @@ import (
 	"github.com/castmill/castmill-os/agent/internal/agent"
 	"github.com/castmill/castmill-os/agent/internal/api"
 	"github.com/castmill/castmill-os/agent/internal/config"
+	"github.com/castmill/castmill-os/agent/internal/display"
 	"github.com/castmill/castmill-os/agent/internal/health"
 	"github.com/castmill/castmill-os/agent/internal/provision"
 	"github.com/castmill/castmill-os/agent/internal/rauc"
@@ -85,6 +89,8 @@ func main() {
 		err = sessionConfig(cfg, fs.Arg(0))
 	case "update":
 		err = requestUpdate(cfg, fs.Arg(0), fs.Arg(1), *now)
+	case "display":
+		err = switchDisplay(fs.Arg(0), fs.Arg(1))
 	case "version":
 		fmt.Println(agent.Version)
 	default:
@@ -96,7 +102,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: castmill-agent run|health [--report-only]|provision|update URL VERSION [--now]|session-config weston|disabled|status|version [--config FILE]")
+	fmt.Fprintln(os.Stderr, "usage: castmill-agent run|health [--report-only]|provision|update URL VERSION [--now]|display OUTPUT on|off|session-config weston|disabled|status|version [--config FILE]")
 	os.Exit(2)
 }
 
@@ -259,5 +265,18 @@ func requestUpdate(cfg *config.Agent, url, version string, now bool) error {
 		return err
 	}
 	fmt.Printf("requested update to %s (%s); follow it with: castmill-agent status\n", version, d.ActivatePolicy)
+	return nil
+}
+
+func switchDisplay(output, power string) error {
+	if output == "" || (power != "on" && power != "off") {
+		return fmt.Errorf("usage: castmill-agent display OUTPUT on|off")
+	}
+	c := &display.Controller{SysRoot: "/", DevRoot: "/dev"}
+	method, err := c.SetPower(output, power == "on")
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s: %s (%s)\n", output, power, method)
 	return nil
 }

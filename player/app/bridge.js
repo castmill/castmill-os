@@ -54,13 +54,15 @@ class MachineBridge {
    * @param {Record<string,string>} o.versions  process.versions
    * @param {() => void} o.restart  restart this player
    * @param {() => Promise<void>} o.clearCache  clear the browser's HTTP cache
+   * @param {(timers: string) => void} [o.timersChanged]  the device schedule (TIMERS) changed
    */
-  constructor({ dir, agentCall, versions, restart, clearCache }) {
+  constructor({ dir, agentCall, versions, restart, clearCache, timersChanged }) {
     this.dir = dir;
     this.agentCall = agentCall;
     this.versions = versions;
     this.restartFn = restart;
     this.clearCacheFn = clearCache;
+    this.timersChangedFn = timersChanged;
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 
@@ -95,8 +97,10 @@ class MachineBridge {
         if (!SETTING_KEYS.has(key)) throw new Error(`unknown setting ${key}`);
         checkString(value, 'value');
         const s = this.readSettings();
+        const changed = s[key] !== value;
         s[key] = value;
         writeAtomic(this.settingsFile, JSON.stringify(s), 0o600);
+        if (key === 'TIMERS' && changed) this.timersChangedFn?.(value);
         return null;
       }
       case 'storeCredentials':

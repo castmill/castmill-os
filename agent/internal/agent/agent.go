@@ -28,6 +28,7 @@ import (
 
 	"github.com/castmill/castmill-os/agent/internal/api"
 	"github.com/castmill/castmill-os/agent/internal/config"
+	"github.com/castmill/castmill-os/agent/internal/display"
 	"github.com/castmill/castmill-os/agent/internal/maintenance"
 	"github.com/castmill/castmill-os/agent/internal/playerlink"
 	"github.com/castmill/castmill-os/agent/internal/rauc"
@@ -62,6 +63,11 @@ type Agent struct {
 	osVersion  string
 	updateKick chan struct{}
 	recovery   map[string]*recoveryState
+
+	display      *display.Controller
+	displayKick  chan struct{}
+	schedules    map[string]display.Timers
+	displayPower map[string]*state.DisplayState
 }
 
 type recoveryState struct {
@@ -80,7 +86,10 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.SysRoot = "/"
 	}
 	a.updateKick = make(chan struct{}, 1)
+	a.displayKick = make(chan struct{}, 1)
 	a.recovery = map[string]*recoveryState{}
+	a.display = &display.Controller{SysRoot: a.SysRoot, DevRoot: filepath.Join(a.SysRoot, "dev")}
+	a.loadDisplaySchedules()
 	for _, d := range []string{a.Cfg.Paths.RunDir, a.Cfg.StateDir(), a.Cfg.AgentConfigDir()} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			return err
@@ -130,6 +139,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	go a.frameWatchdog(ctx)
 	go a.probeLoop(ctx)
+	go a.displayLoop(ctx)
 	_ = system.Notify("READY=1\nSTATUS=running")
 	a.publishLoop(ctx)
 	return nil
@@ -202,8 +212,10 @@ type DeviceInfo struct {
 	Hardware   string `json:"hardware"`
 }
 
-func (a *Agent) call(ctx context.Context, output, method string, _ json.RawMessage) (any, error) {
+func (a *Agent) call(ctx context.Context, output, method string, args json.RawMessage) (any, error) {
 	switch method {
+	case "set_timers":
+		return nil, a.setTimers(output, args)
 	case "machine_id":
 		// One Castmill device per output: independent content per screen (MED-005).
 		return a.machineID + "-" + output, nil
@@ -381,6 +393,10 @@ func (a *Agent) publish() {
 		outs[name] = state.OutputState{Connected: c, Player: att, LastFrame: a.player.LastFrame(name)}
 	}
 	a.rt.Outputs = outs
+	a.rt.Display = map[string]state.DisplayState{}
+	for name, p := range a.displayPower {
+		a.rt.Display[name] = *p
+	}
 	a.rt.Updated = time.Now().UTC()
 	a.rt.TimeTrusted = system.TimeTrusted(a.Cfg.Paths.RunDir)
 	if a.upd != nil {
