@@ -38,7 +38,8 @@ jobs:
             layers/meta-castmill/recipes-castmill/castmill-base/files/castmill-banner \
             layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-session \
             layers/meta-castmill/recipes-castmill/castmill-session/files/castmill-outputs \
-            layers/meta-castmill/recipes-castmill/castmill-player/files/castmill-player
+            layers/meta-castmill/recipes-castmill/castmill-player/files/castmill-player \
+            layers/meta-castmill/recipes-castmill/castmill-installer/files/castmill-install
       - name: actionlint
         run: |
           go install "github.com/rhysd/actionlint/cmd/actionlint@v${ACTIONLINT_VERSION}"

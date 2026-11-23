@@ -1,0 +1,219 @@
+#!/bin/sh
+# BusyBox ash (read -t and -n are BusyBox extensions).
+# castmill-install: the Castmill OS installer for x86-64 PCs (spec 08,
+# "x86-64 USB installer"). Runs as init (PID 1) from the installer stick:
+#
+#   1. finds the internal disk (NVMe first, then eMMC, then SATA; the largest
+#      of the best kind; never the stick itself or another USB disk);
+#   2. shows the disk with a countdown; any key opens a menu to pick another
+#      disk or cancel;
+#   3. writes Castmill OS (castmill-os.wic.zst on the CASTMILL partition);
+#   4. copies castmill.conf from the stick to the new boot partition;
+#   5. powers off, so the PC doesn't boot the stick again.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+LABEL=CASTMILL
+COUNTDOWN=10
+PAYLOAD=/mnt/payload
+TARGET=/mnt/target
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+mount -t tmpfs tmpfs /run
+# The screen (console=tty0 is the last console on the kernel command line).
+exec </dev/console >/dev/console 2>&1
+
+VERSION="$(cat /usr/share/castmill/version 2>/dev/null)"
+WRITING=0
+
+say() { echo "$*"; }
+
+power_off() {
+    sync
+    umount "$TARGET" "$PAYLOAD" 2>/dev/null
+    poweroff -f
+    while :; do sleep 60; done # PID 1 must never exit
+}
+
+fail() {
+    say ""
+    say "ERROR: $*"
+    say ""
+    if [ "$WRITING" = 1 ]; then
+        say "The disk was partly written and won't start. Run the installer again."
+    else
+        say "Nothing was written to the disk."
+    fi
+    say "Press any key to power off."
+    # shellcheck disable=SC3045
+    read -r -n 1 -s _
+    power_off
+}
+
+# Wait for a key for up to $1 seconds; succeed if one was pressed.
+key_within() {
+    # shellcheck disable=SC3045
+    read -r -t "$1" -n 1 -s _ 2>/dev/null
+}
+
+printf "\033[2J\033[H"
+cat /usr/share/castmill/logo.txt 2>/dev/null
+say ""
+say "  Castmill OS $VERSION installer"
+say ""
+
+# --- The installer stick --------------------------------------------------------
+part=""
+for _ in $(seq 1 30); do
+    part="$(blkid -L "$LABEL" 2>/dev/null)" && [ -n "$part" ] && break
+    sleep 1
+done
+[ -n "$part" ] || fail "the $LABEL partition of the installer stick wasn't found."
+STICK="$(basename "$(readlink -f "/sys/class/block/$(basename "$part")/..")")"
+mkdir -p "$PAYLOAD" "$TARGET"
+mount -t vfat -o ro "$part" "$PAYLOAD" || fail "can't read the $LABEL partition."
+IMAGE="$PAYLOAD/castmill-os.wic.zst"
+[ -f "$IMAGE" ] || fail "castmill-os.wic.zst is missing from the installer stick."
+IMAGE_SIZE="$(sed -n 's:.*<ImageSize> *\([0-9]*\) *</ImageSize>.*:\1:p' "$PAYLOAD/castmill-os.wic.bmap" 2>/dev/null)"
+[ -n "$IMAGE_SIZE" ] || fail "castmill-os.wic.bmap is missing or damaged."
+
+say "  Checking the installer stick..."
+zstd -tq "$IMAGE" || fail "the image on the installer stick is damaged. Write the stick again."
+
+# --- Disks --------------------------------------------------------------------------
+# Lines "rank sectors name": rank 3 NVMe, 2 eMMC, 1 SATA, 0 USB (menu only).
+disks() {
+    for s in /sys/block/*; do
+        n="${s##*/}"
+        case "$n" in loop* | ram* | zram* | sr* | fd* | dm-* | md* | nbd* | mmcblk*boot* | mmcblk*rpmb) continue ;; esac
+        [ "$n" = "$STICK" ] && continue
+        sectors="$(cat "$s/size")"
+        [ $((sectors * 512)) -ge "$IMAGE_SIZE" ] || continue
+        case "$(readlink -f "$s")" in
+        */usb*) rank=0 ;;
+        *) case "$n" in nvme*) rank=3 ;; mmcblk*) rank=2 ;; *) rank=1 ;; esac ;;
+        esac
+        [ "$(cat "$s/removable" 2>/dev/null)" = 1 ] && rank=0
+        echo "$rank $sectors $n"
+    done | sort -k1,1nr -k2,2nr
+}
+
+describe() { # name -> "model, 256 GB (/dev/nvme0n1)"
+    s="/sys/block/$1"
+    model="$(cat "$s/device/model" "$s/device/name" 2>/dev/null | head -n 1 | sed 's/^ *//;s/ *$//')"
+    gb=$(($(cat "$s/size") * 512 / 1000000000))
+    echo "${model:-Disk}, $gb GB (/dev/$1)"
+}
+
+menu() {
+    say ""
+    say ""
+    say "  Disks:"
+    i=0
+    for n in $(disks | while read -r _ _ name; do echo "$name"; done); do
+        i=$((i + 1))
+        say "    $i) $(describe "$n")"
+        eval "choice_$i=$n"
+    done
+    say "    0) Cancel and power off"
+    while :; do
+        printf "  Install on disk number: "
+        read -r answer
+        case "$answer" in
+        0) power_off ;;
+        '' | *[!0-9]*) ;;
+        *) if [ "$answer" -le "$i" ]; then eval "DISK=\$choice_$answer"; return; fi ;;
+        esac
+    done
+}
+
+DISK="$(disks | while read -r rank _ name; do [ "$rank" -gt 0 ] && echo "$name"; done | head -n 1)"
+if [ -z "$DISK" ]; then
+    say ""
+    say "  No internal disk was found (big enough for Castmill OS)."
+    [ -n "$(disks)" ] || fail "no disk to install on."
+    menu
+else
+    say ""
+    say "  Castmill OS will be installed on:"
+    say ""
+    say "    $(describe "$DISK")"
+    say ""
+    say "  EVERYTHING ON THIS DISK WILL BE ERASED."
+    say ""
+    i=$COUNTDOWN
+    while [ $i -gt 0 ]; do
+        printf "\r  Starting in %2d s. Press any key to choose another disk or cancel. " $i
+        if key_within 1; then
+            menu
+            break
+        fi
+        i=$((i - 1))
+    done
+fi
+
+# --- Write --------------------------------------------------------------------------
+say ""
+say ""
+say "  Installing on $(describe "$DISK")."
+say "  This takes a few minutes. Don't power off or remove the stick."
+WRITING=1
+# shellcheck disable=SC2046  # split the counters into $1..$11
+set -- $(cat "/sys/block/$DISK/stat")
+written0=$7
+rm -f /run/zstd-failed
+(zstd -dcq "$IMAGE" || touch /run/zstd-failed) | dd of="/dev/$DISK" bs=4M conv=fsync 2>/run/dd.log &
+pid=$!
+while kill -0 $pid 2>/dev/null; do
+    # shellcheck disable=SC2046
+    set -- $(cat "/sys/block/$DISK/stat")
+    pct=$((($7 - written0) * 512 * 100 / IMAGE_SIZE))
+    [ $pct -gt 99 ] && pct=99
+    printf "\r  %3d %%" $pct
+    sleep 1
+done
+wait $pid
+rc=$?
+[ $rc -eq 0 ] && [ ! -e /run/zstd-failed ] || fail "writing the disk failed: $(tail -n 1 /run/dd.log)"
+sync
+printf "\r  100 %%\n"
+
+# --- castmill.conf ----------------------------------------------------------------
+if [ -f "$PAYLOAD/castmill.conf" ]; then
+    blockdev --rereadpt "/dev/$DISK" 2>/dev/null
+    boot=""
+    for _ in $(seq 1 20); do
+        for p in "/sys/block/$DISK/$DISK"*; do
+            [ "$(cat "$p/partition" 2>/dev/null)" = 1 ] && boot="/dev/${p##*/}"
+        done
+        [ -n "$boot" ] && [ -b "$boot" ] && break
+        sleep 1
+    done
+    if [ -n "$boot" ] && mount -t vfat "$boot" "$TARGET"; then
+        # With certificates it refers to (ca_cert_file, next to castmill.conf).
+        cp "$PAYLOAD/castmill.conf" "$PAYLOAD"/*.pem "$TARGET/" 2>/dev/null
+        [ -f "$TARGET/castmill.conf" ] && say "  castmill.conf copied."
+        umount "$TARGET"
+    else
+        say "  WARNING: castmill.conf could not be copied. Put it on the boot partition by hand."
+    fi
+fi
+WRITING=0
+sync
+
+# --- Done -----------------------------------------------------------------------------
+say ""
+say "  Castmill OS is installed."
+say ""
+say "  Remove the USB stick, then power the PC on again."
+say ""
+i=15
+while [ $i -gt 0 ]; do
+    printf "\r  Powering off in %2d s (press any key to power off now). " $i
+    key_within 1 && break
+    i=$((i - 1))
+done
+say ""
+power_off

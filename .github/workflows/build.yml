@@ -219,6 +219,12 @@ jobs:
           cp -L "$image.wic.zst" "$image.wic.bmap" "$out"/
           cp -L "$image.spdx.json" "$out"/ 2>/dev/null || true
           cp -L "$deploy"/castmill-os-bundle-"$MACHINE".raucb "$out"/ 2>/dev/null || true
+          # Installer stick (x86-64): .img.xz, the name flashing tools recognize.
+          installer="$deploy/castmill-os-installer-$MACHINE.rootfs"
+          if [ -e "$installer.wic.xz" ]; then
+            cp -L "$installer.wic.xz" "$out/castmill-os-installer-$MACHINE.img.xz"
+            cp -L "$installer.wic.bmap" "$out/castmill-os-installer-$MACHINE.img.bmap"
+          fi
           ls -lh "$out"
           # GitHub Release assets must be < 2 GiB (spec 10).
           find "$out" -type f -size +2047M -print -exec false {} + || { echo "artifact too large"; exit 1; }

@@ -1,0 +1,14 @@
+# Castmill OS device configuration. Rename this file to castmill.conf and
+# keep only what you need. Ethernet with DHCP needs no configuration.
+# Reference: https://castmill.github.io/castmill-os/setup/castmill-conf
+
+[network.wifi]
+ssid = "Store-Signage"
+psk = "your-wifi-password"
+
+# [network.proxy]
+# https = "http://proxy.example.com:3128"
+# no_proxy = "localhost,127.0.0.1"
+
+[time]
+timezone = "Europe/Madrid"

@@ -1,0 +1,11 @@
+# Castmill OS installer stick (castmill-installer.wks.in): boots the kernel
+# from the ESP with the installer system (partition 2) as a read-only root
+# and castmill-install as init.
+set default=0
+set timeout=0
+
+@LOGO@
+echo ""
+echo "Castmill OS installer: starting..."
+linux /bzImage root=PARTUUID=@UUID_INSTALLER@ rootfstype=ext4 ro rootwait init=/usr/sbin/castmill-install quiet loglevel=3 consoleblank=0 console=ttyS0,115200 console=tty0
+boot

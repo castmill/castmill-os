@@ -1,0 +1,16 @@
+# Castmill OS installer stick for x86-64 PCs (spec 08). See
+# recipes-core/images/castmill-os-installer.bb.
+#
+#   1 ESP      GRUB, grub.cfg and the kernel
+#   2 rootfs   the installer system (read-only; castmill-install is init)
+#   3 CASTMILL FAT "basic data" partition, shown as a drive by Windows and
+#              macOS: the Castmill OS image, README.txt, castmill.conf.example.
+#              Users add castmill.conf here.
+
+bootloader --ptable gpt --timeout=0 --configfile="${DEPLOY_DIR_IMAGE}/castmill-installer-grub.cfg"
+
+part /boot --source bootimg_efi --sourceparams="loader=grub-efi" --label EFI --part-name efi --part-type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B --active --align 1024 --size 64M --no-fstab-update
+
+part / --source rootfs --fstype=ext4 --label installer --part-name installer --uuid ${CASTMILL_UUID_INSTALLER} --align 1024 --no-fstab-update
+
+part --source bootimg_partition --fstype=vfat --label CASTMILL --part-name CASTMILL --part-type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 --align 1024 --extra-space 32M --no-fstab-update

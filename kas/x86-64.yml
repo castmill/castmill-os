@@ -13,6 +13,12 @@ header:
 
 machine: genericx86-64
 
+# Also the installer stick (castmill-os-installer, spec 08).
+target:
+  - castmill-os-image
+  - castmill-os-bundle
+  - castmill-os-installer
+
 local_conf_header:
   castmill-x86-64: |
     EFI_PROVIDER = "grub-efi"
