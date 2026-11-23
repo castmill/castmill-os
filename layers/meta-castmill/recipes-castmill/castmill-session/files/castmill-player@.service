@@ -27,6 +27,10 @@ Restart=always
 # then fires only when the start limit is hit, not on every crash.
 RestartMode=direct
 RestartSec=2
+# Stop: SIGTERM to Electron only, which shuts down its helper processes.
+# Killing them all at once makes Chromium abort (it can't relaunch its GPU
+# process), and that crash would count as a failure.
+KillMode=mixed
 
 # Least privilege (SEC-010). Chromium's own sandbox uses user namespaces,
 # so namespaces are not restricted here.
