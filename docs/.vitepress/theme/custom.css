@@ -48,3 +48,12 @@ a.VPFeature:hover,
   display: block;
   overflow-x: auto;
 }
+
+/* Trademark sign after "Castmill" in large headings. */
+.tm {
+  font-size: 0.32em;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 0.04em;
+  -webkit-text-fill-color: currentColor;
+}

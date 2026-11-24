@@ -174,7 +174,7 @@ export default defineConfig({
   themeConfig: {
     release: RELEASE,
     logo: '/logo.svg',
-    siteTitle: 'Castmill OS',
+    siteTitle: 'Castmill™ OS',
 
     nav: [
       { text: 'Guide', link: '/guide/introduction', activeMatch: '^/(guide|setup|operate)/' },
@@ -219,7 +219,7 @@ export default defineConfig({
 
     footer: {
       message:
-        'Documentation licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Code under MIT and Apache-2.0.',
+        'Documentation licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Code under MIT and Apache-2.0. Castmill™ and the Castmill logo are trademarks and aren\'t covered by these licenses.',
       copyright: '© 2026 The Castmill OS contributors',
     },
   },

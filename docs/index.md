@@ -4,7 +4,7 @@ title: Castmill OS
 titleTemplate: Immutable Linux for digital signage
 
 hero:
-  name: Castmill OS
+  name: Castmill<sup class="tm">™</sup> OS
   text: The operating system your screens deserve
   tagline: Open source, immutable and self-healing Linux for digital signage. One signed image that updates itself safely and never needs a visit.
   actions:
