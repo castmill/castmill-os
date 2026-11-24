@@ -87,7 +87,7 @@ Signage screens don't move, so the plan is to set the location **in the Castmill
 
 This is Castmill work and needs no change to Castmill OS.
 
-**Later: GPS.** Screens that move (buses, trains, taxis) need a live location. The agent can read it from a USB GNSS receiver or an LTE modem with GNSS (through `gpsd` or ModemManager) and report it with its telemetry. `getLocation` would then answer from it, and a live location would take precedence over the one set in the dashboard. Reporting a moving location would be opt-in per organisation. See the [roadmap](specs/11-roadmap.md#phase-3-expansion).
+**Later: GPS.** Screens that move (buses, trains, taxis) need a live location. The agent can read it from a USB GNSS receiver or an LTE modem with GNSS (through `gpsd` or ModemManager) and report it with its telemetry. `getLocation` would then answer from it, and a live location would take precedence over the one set in the dashboard. Reporting a moving location would be opt-in per organisation. Planned for after 1.0 ([roadmap](specs/11-roadmap.md)).
 
 ## Agent socket
 

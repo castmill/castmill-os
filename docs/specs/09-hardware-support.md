@@ -35,7 +35,7 @@ Status: Draft v0.1
 - Raspberry Pi 4 / CM4
 - AMD Ryzen mini PCs (Mesa `radeonsi`, VA-API)
 - Rockchip RK3588 (multi-4K/8K decoding; depends on mainline driver maturity)
-- GNSS receivers for moving screens: USB receivers (for example u-blox) and LTE modems with GNSS, through `gpsd` or ModemManager ([roadmap](11-roadmap.md#phase-3-expansion))
+- GNSS receivers for moving screens: USB receivers (for example u-blox) and LTE modems with GNSS, through `gpsd` or ModemManager ([roadmap](11-roadmap.md), after 1.0)
 
 ## Hardware qualification checklist
 
