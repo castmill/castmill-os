@@ -72,10 +72,17 @@ jobs:
           printf '%s\n' "$PROD_CERT" > "$k/cert.pem"
           printf '%s\n' "$DEV_KEYRING" > "$k/dev-keyring.pem"
           ring=layers/meta-castmill/files/keys/production-keyring.pem
+          # Check the certificates as code signers, as devices do (system.conf
+          # check-purpose); RAUC's default is S/MIME, which rejects them.
+          conf="$RUNNER_TEMP/rauc.conf"
+          printf '[system]\ncompatible=castmill-os\nbootloader=noop\n[keyring]\ncheck-purpose=codesign\n' > "$conf"
           for b in dist/*.raucb; do
-            rauc resign --cert "$k/cert.pem" --key "$k/key.pem" --keyring "$k/dev-keyring.pem" "$b" "$b.signed"
+            # --keyring checks the development signature, --signing-keyring
+            # the new one.
+            rauc --conf "$conf" resign --cert "$k/cert.pem" --key "$k/key.pem" \
+              --keyring "$k/dev-keyring.pem" --signing-keyring "$ring" "$b" "$b.signed"
             # The production images must accept it.
-            rauc info --keyring "$ring" "$b.signed" > /dev/null
+            rauc --conf "$conf" info --keyring "$ring" "$b.signed" > /dev/null
             mv "$b.signed" "$b"
             echo "re-signed $(basename "$b")"
           done
