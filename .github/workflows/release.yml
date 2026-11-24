@@ -1,5 +1,5 @@
 # Release: tag vX.Y.Z (or vX.Y.Z-rc.N) -> build every target -> GitHub
-# pre-release with images, RAUC bundles, SBOMs and SHA256SUMS.
+# pre-release with images, RAUC bundles, SBOMs, CVE reports and SHA256SUMS.
 #
 # Images trust only the production root CA. Bundles are built signed with the
 # development key and re-signed with the production key by the "sign" job,
@@ -86,8 +86,53 @@ jobs:
           path: dist/*.raucb
           if-no-files-found: error
 
+  # CVE report per image (SEC-009): OE-core's sbom-cve-check on each SBOM,
+  # against the CVE databases of the release day. Runs while "sign" waits
+  # for approval; open CVEs are reported, they don't block the release.
+  cve-report:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          pattern: image-*
+          path: dist
+          merge-multiple: true
+
+      - name: Scan the SBOMs
+        env:
+          # The CVE databases are ~9 GB: keep them on the larger /mnt disk.
+          SBOM_CVE_CHECK_DATABASES_DIR: /mnt/cve-db
+        run: |
+          sudo mkdir -p "$SBOM_CVE_CHECK_DATABASES_DIR"
+          sudo chown "$(id -u):$(id -g)" "$SBOM_CVE_CHECK_DATABASES_DIR"
+          mkdir cve
+          mv dist/*.spdx.json cve/
+          scripts/cve-report.sh cve
+          rm cve/*.spdx.json
+          {
+            echo "| Image | Open CVEs | Packages affected |"
+            echo "|---|---|---|"
+            for f in cve/*.cve.txt; do
+              echo "| $(basename "$f" .cve.txt) | $(grep -o 'CVE-[0-9-]*' "$f" | wc -l) | $(wc -l < "$f") |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: cve-report
+          path: cve/
+          if-no-files-found: error
+
   publish:
-    needs: [build, sign]
+    needs: [build, sign, cve-report]
     runs-on: ubuntu-latest
     permissions:
       contents: write  # create the GitHub release
@@ -110,6 +155,11 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           name: signed-bundles
+          path: dist
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: cve-report
           path: dist
 
       # Release manifest for Castmill's OS updates (ADR-0010).
@@ -142,6 +192,8 @@ jobs:
           Raspberry Pi 5: flash `castmill-os-image-raspberrypi5.rootfs.wic.zst` to the
           SD card or SSD. Install guides: https://os.castmill.com/install/
           Updates: serve the `.raucb` bundle to devices built from the same release keys.
+          Security: each image has an SBOM (`.spdx.json`) and a CVE report from the
+          release day (`.cve.txt`, and `.cve.json` in Yocto's cve-check format).
           MD
           gh release create "$TAG" dist/* --prerelease --title "Castmill OS ${TAG#v}" \
             --notes-file "$notes" --generate-notes

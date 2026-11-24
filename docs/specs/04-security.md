@@ -52,7 +52,7 @@ Devices use Castmill's own device identity ([ADR-0008](../adr/0008-reuse-castmil
 
 ## Vulnerability management
 
-- Yocto `cve-check` and SPDX SBOM generation in every build. SBOM published with each release.
+- SPDX SBOM generation in every build. Each release publishes the SBOM and a CVE report per image (OE-core's `sbom-cve-check` on the SBOM, against the CVE databases of the release day).
 - **Electron/Chromium** is the largest and most exposed component. Track Electron stable releases and ship security releases promptly (NFR-006). CI checks that hardware video decoding still works on every Electron upgrade.
 - Kernel: LTS series with regular point-release updates.
 - Public security advisory process and `SECURITY.md` with a disclosure contact.

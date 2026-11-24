@@ -29,7 +29,7 @@ Castmill OS moves to 1.0 in releases. Each one is a GitHub pre-release that can 
 - [x] Wi-Fi on site: on-screen setup on the status page and `castmill.conf` from a USB stick, both only while offline
 - [x] Production signing: offline root CA, signing key in a protected, approval-gated release job ([Release signing](../release-signing.md))
 - [x] Layer versions pinned (`kas/*.lock.yml`, updated with `scripts/lock-layers.py`)
-- [ ] CVE report published with each release
+- [x] CVE report published with each release (`sbom-cve-check` on each image's SBOM)
 - [ ] Castmill dashboard: set a device's location; live online status when the dashboard opens; versioned device-app files (no CDN cache delays after a deploy)
 - [ ] Release candidates: `v0.3.0-rc.1` (first production-signed release; re-flash test devices), then `rc.2` installed by the VM through Castmill
 

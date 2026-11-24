@@ -18,7 +18,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | SEC-006 | – (key on `/data`, 0600, agent user; TPM in the FC release) | | |
 | SEC-007 | – (FC release) | | |
 | SEC-008 | Agent downloads and installs updates automatically; activation per maintenance window or security policy. | `agent/internal/updater` | tested |
-| SEC-009 | SPDX SBOM (`create-spdx`, OE-core default) uploaded by `build.yml`. **CVE report not yet**: Wrynose replaced `cve-check` with `sbom-cve-check`, still to be wired into CI. | `castmill.conf` | parsed |
+| SEC-009 | SPDX SBOM (`create-spdx`, OE-core default) uploaded by `build.yml`; CVE report per image (`.cve.txt`, `.cve.json`) from OE-core's `sbom-cve-check` on the SBOM, run by `release.yml` against the CVE databases of the release day. A daily re-scan (`cve-watch.yml`) comes later. | `scripts/cve-report.sh`, `release.yml` | run on the v0.2.0 SBOMs; release job untested |
 | SEC-010 | `player` and `agent` users with fixed UIDs; systemd sandboxing on every Castmill service; polkit limits the agent to rebooting and restarting the session/players; D-Bus policy limits the agent to RAUC's installer interface. Electron: `contextIsolation`, `sandbox`, no Node.js in renderers, navigation allowlist, permissions denied by default. | `castmill-base`, unit files, `player/app` | parsed / tested (player policy) |
 
 ## Reliability
