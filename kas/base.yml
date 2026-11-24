@@ -11,8 +11,9 @@
 # Signing keys: CASTMILL_KEYS_DIR must contain rauc-signing.{cert,key}.pem and
 # rauc-keyring.pem (scripts/gen-dev-keys.sh creates development keys).
 #
-# TODO (Phase 0): pin every repository to a commit with `kas lock`
-# and commit the generated *.lock.yml files.
+# Layer versions: every target has a kas/<target>.lock.yml with the exact
+# commit of each repository; kas applies it automatically. Update them with
+# scripts/lock-layers.py (docs/development.md, "Update the Yocto layers").
 
 header:
   version: 14

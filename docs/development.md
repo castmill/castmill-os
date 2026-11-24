@@ -106,6 +106,17 @@ Usually unnecessary: CI builds every branch. If you need a local build:
 - **Linux workstation or server (x86-64 or arm64):** `pipx install kas` then `kas-container build kas/vm-arm64.yml:kas/dev.yml`. A first build needs 100+ GB of disk and a few hours; later builds reuse the cache.
 - **macOS:** builds must run inside a Linux VM with its own **case-sensitive** disk (for example an OrbStack or Lima VM). Don't build in a folder shared from macOS: the macOS file system is case-insensitive by default, which Yocto doesn't support.
 
+## Update the Yocto layers
+
+Every target builds with exact layer commits from `kas/<target>.lock.yml`, so the same castmill-os commit always builds the same system. To move to newer commits of the layers' branches (security fixes in OE-core, for example):
+
+```sh
+uvx --with pyyaml python scripts/lock-layers.py           # rewrite the lock files
+uvx --with pyyaml python scripts/lock-layers.py --check   # only report
+```
+
+Commit the changed `kas/*.lock.yml` on a branch and let CI build every target before merging. Do it at least once a month, and right away for security fixes.
+
 ## Targets
 
 | kas file | Machine | Use |
@@ -122,6 +133,6 @@ Usually unnecessary: CI builds every branch. If you need a local build:
 | `agent/` | `castmill-agent` (Go): castmillOS bridge (native side), A/B updates, health check, provisioning | `cd agent && go test ./...` |
 | `player/` | Electron kiosk shell (one process per output) running Castmill's device app | `cd player && npm run check` |
 | `layers/meta-castmill/` | Yocto layer: distro, image, bundle, system integration | `kas-container shell kas/vm-arm64.yml -c "bitbake -g castmill-os-image"` |
-| `scripts/` | VM runner, dev keys, Go module pin check | `scripts/check-go-mods.sh` |
+| `scripts/` | VM runner, dev and production keys, Go module and layer pins | `scripts/check-go-mods.sh`, `scripts/lock-layers.py --check` |
 
 Combine with `:` — for example `kas build kas/vm-arm64.yml:kas/dev.yml`.

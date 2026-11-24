@@ -25,7 +25,7 @@ Castmill OS is built with the Yocto Project as a set of complete, signed system 
 ## Build system
 
 - **Yocto Project 6.0 "Wrynose" LTS** with one project layer, `meta-castmill`: distro configuration (`DISTRO = "castmill"`), images, the update bundle, the installer, agent, kiosk shell, session, boot configuration (GRUB on UEFI, firmware tryboot on the Pi) and kernel configuration fragments. Platform differences are machine overrides, not separate layers.
-- Upstream layers: `bitbake`, `openembedded-core`, `meta-yocto` (generic machines only), `meta-openembedded`, `meta-rauc`, `meta-raspberrypi` (Pi 5), `meta-intel` (x86-64, Intel media driver only). Electron is the prebuilt release (`electron-bin` recipe). *Planned:* layer versions pinned with `kas lock`; `meta-security` to evaluate.
+- Upstream layers: `bitbake`, `openembedded-core`, `meta-yocto` (generic machines only), `meta-openembedded`, `meta-rauc`, `meta-raspberrypi` (Pi 5), `meta-intel` (x86-64, Intel media driver only). Electron is the prebuilt release (`electron-bin` recipe). Layer versions are pinned per target (`kas/*.lock.yml`). *To evaluate:* `meta-security`.
 - Builds are described with **kas** files so they are reproducible on any CI runner.
 - See [10](10-build-release-testing.md).
 
