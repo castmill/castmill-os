@@ -1,17 +1,17 @@
 # 06 — Display, graphics and media
 
-Status: Draft v0.1 · Related: MED-*, [ADR-0003](../adr/0003-electron-player-runtime.md), [ADR-0004](../adr/0004-sway-kiosk-compositor.md)
+Status: v0.3 · Related: MED-*, [ADR-0003](../adr/0003-electron-player-runtime.md), [ADR-0004](../adr/0004-sway-kiosk-compositor.md)
 
 ## Graphics stack
 
 - Kernel modesetting (KMS/DRM). **No X11.**
 - Mesa: `iris` (Intel Gen8+) and `crocus` (Gen4–7), `v3d`/`vc4` (Raspberry Pi). Chromium renders pages, CSS effects, animations and WebGL on the GPU through Mesa (`--enable-gpu-rasterization`, `--ignore-gpu-blocklist`); without a working GPU driver it falls back to software rendering, which is much slower.
-- Wayland compositor in a locked-down kiosk configuration: **Sway** or **Weston kiosk-shell** (ADR-0004, decided in Phase 0).
+- Wayland compositor: **Weston kiosk-shell** in a locked-down configuration ([ADR-0004](../adr/0004-sway-kiosk-compositor.md)).
 - Electron runs as a native Wayland client (`--ozone-platform=wayland`).
 
 ## Multiple outputs
 
-- The player opens one `BrowserWindow` per output. The compositor pins each window fullscreen to its output (Sway `for_window` rules or Weston kiosk-shell per-output app IDs) (matched by app ID and title, for example `castmill-output-HDMI-A-1`).
+- One kiosk shell process per output (`castmill-player@<output>`), each with one fullscreen window. Weston kiosk-shell pins it to its output by Wayland app ID (for example `castmill-output-HDMI-A-1`).
 - Per output: mode (resolution and refresh rate), rotation (0/90/180/270), scaling, and a forced mode when the EDID is unreliable.
 - Modes: **independent** (different content per screen, v1) and **spanned** (one canvas across outputs, later; needed for video walls).
 - Configuration comes from Castmill through the agent and is applied through the compositor's IPC without a reboot.

@@ -2,11 +2,11 @@
 
 > **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** Castmill OS uses Castmill's own device app and device protocol (pincode pairing, device token, `/socket` channels, commands, telemetry). `castmill-agent` no longer enrolls or talks to the backend; it serves the native side of the device app through the `castmillOS` bridge and handles OS updates, health and provisioning. See [Castmill integration](../castmill-integration.md). Sections below that describe the agent's own enrollment, WebSocket and commands are superseded; screenshots, log upload and remote shell become Castmill platform features.
 
-Status: Draft v0.1 · Related: MGT-*
+Status: v0.3 · Related: MGT-*
 
 ## castmill-agent
 
-A small daemon (language to be decided; Go or Rust preferred for a single static binary with little memory use), separate from the player.
+A small daemon in Go (a single static binary with little memory use), separate from the player.
 
 ### Responsibilities
 

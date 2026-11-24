@@ -1,13 +1,15 @@
 # ADR-0004: Kiosk compositor for v1 (Sway or Weston kiosk-shell)
 
-- Status: Proposed (open, to decide in Phase 0)
-- Date: 2026-11-22
+- Status: Accepted: **Weston kiosk-shell** (2026-11-24; first proposal: Sway)
+- Date: 2026-11-22, decided 2026-11-24
+
+> **Decision (2026-11-24):** Castmill OS v1 uses **Weston kiosk-shell**, as implemented since v0.1: it's in OE-core, needs no extra layer, and runs one kiosk shell per output reliably in the development VM. Sway stays an option for spanned outputs and video walls (Phase 3). The original proposal below is kept for the record.
 
 ## Context
 
 The player needs a Wayland compositor that runs one fullscreen Electron window per output, supports per-output modes and rotation, survives hotplug, and can be controlled by the agent (outputs, screenshots).
 
-## Decision
+## Original proposal (not adopted)
 
 Use **Sway** with a locked-down configuration: no bar, no keybindings except a dev-image escape, `for_window` rules pinning player windows to outputs, IPC restricted to the `player` and `agent` users. Screenshots via `grim`.
 
@@ -39,6 +41,6 @@ The first implementation uses **Weston kiosk-shell**, because it needs no extra 
 
 ## Consequences
 
-- Quick to deliver multi-output support with mature wlroots underneath.
-- A small amount of configuration hardening is needed (Sway is designed as a desktop window manager).
-- Revisit when spanned outputs / video walls or the native video path need tighter control. A custom wlroots compositor stays an option.
+- One Electron process per output (memory per output, separate caches), see above.
+- Output mode and rotation changes restart the session (a few seconds of black screen).
+- Revisit when spanned outputs / video walls or the native video path need tighter control: Sway (own wlroots/Sway recipes) or a custom wlroots compositor.

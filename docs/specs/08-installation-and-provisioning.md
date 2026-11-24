@@ -1,6 +1,6 @@
 # 08 — Installation and provisioning
 
-Status: Draft v0.1 · Related: PRV-*
+Status: v0.3 · Related: PRV-*
 
 ## Goals
 
@@ -63,10 +63,13 @@ timezone = "Europe/Madrid"
 
 The file is used once, moved into encrypted `data`, and deleted from the boot partition.
 
-### Other keyboard-free configuration
+### Configuration on site
 
-- **Local setup access point** (MAY): with no network, the device starts a temporary Wi-Fi AP with a captive configuration page. Disabled once enrolled.
-- **USB stick with `castmill.conf`** inserted at any time before enrollment.
+Both only while the device is offline, so a working screen can't be reconfigured by whoever plugs something in ([Wi-Fi on site](../setup/wifi.md)):
+
+- **On-screen Wi-Fi setup:** the status page lists the networks in range; pick one and type the password with a USB keyboard and mouse or a touchscreen.
+- **USB stick with `castmill.conf`:** applied when plugged in, and kept on the stick for the next device.
+- *Not planned for now:* a temporary setup access point with a captive page, and TV-remote (HDMI-CEC) control of the status page with an on-screen keyboard.
 
 ## Re-provisioning
 

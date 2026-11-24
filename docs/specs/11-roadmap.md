@@ -1,63 +1,73 @@
 # 11 — Roadmap
 
-Status: Draft v0.1 · Dates are indicative.
+Status: v0.3 · Updated 2026-11-24 · No dates: each release ships when its items are done.
 
-## Phase 0: Prototype (≈ 4 weeks)
+Castmill OS moves to 1.0 in releases. Each one is a GitHub pre-release that can be installed and tested; what's missing on real hardware is tracked in the [implementation status](../implementation-status.md).
 
-Goal: lower the main technical risks before committing to the full architecture.
+## Done
 
-- [x] kas configuration for `x86-64`, `rpi5`, `vm-arm64` (Yocto 6.0 Wrynose) + minimal `meta-castmill` layer
-- [x] `checks.yml`, `build.yml`, CODEOWNERS, Dependabot (drafts)
-- [x] Initial implementation (v0.1): A/B layout with GRUB boot counting, RAUC config and bundle, read-only rootfs with `/data`, `castmill-agent` + `castmill-health` + provisioning, Weston kiosk session with the Electron kiosk shell. See [implementation status](../implementation-status.md).
-- [ ] GitHub repository with branch rulesets; larger-runner group `castmill-os-builders`; Actions cache limit raised
-- [x] First green builds of all three targets (clean and cached build times still to measure)
-- [x] Development VM booting on Apple Silicon Mac (`scripts/run-vm.sh`)
-- [ ] Pin layers with `kas lock`
-- [ ] Compositor decision (ADR-0004)
-- [x] Intel GPU rendering (Mesa `iris`) and VA-API driver (`intel-media-driver` from `meta-intel`); to verify on hardware
-- [ ] Check impact of GPLv3-free production images (`INCOMPATIBLE_LICENSE`, ADR-0007)
-- [ ] Sway kiosk + Electron Castmill player booting to content on both
-- [ ] Video benchmark matrix (see [06](06-display-and-media.md)), comparing the Yocto image against Raspberry Pi OS with the same player and test videos:
-  - Intel: VA-API 4K H.264/HEVC/VP9/AV1
-  - Pi 5: H.264 1080p/4K, HEVC 4K; confirm the decoder actually used
-- [ ] Quick test: GStreamer HEVC 4K into a Wayland surface below a transparent Electron window on Pi 5
-- [x] RAUC A/B on both platforms: GRUB boot counting (x86-64), firmware `tryboot` on Pi 5 ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md)); Pi to verify on hardware
-- [ ] RAM, image size and boot-time measurements against the NFR targets
-- [ ] **Output:** updated specs + accepted ADRs
+**v0.1 (first test release)**
 
-## Phase 1: MVP (≈ 3 months)
+- [x] Yocto 6.0 "Wrynose" build with kas for `x86-64`, `rpi5` and `vm-arm64`; `meta-castmill` layer; CI (`checks.yml`, `build.yml`, `release.yml`) on standard GitHub runners
+- [x] A/B updates with RAUC: GRUB boot counting on UEFI, `castmill-health` commit and rollback, maintenance windows, read-only root filesystem, everything writable on `data`
+- [x] Castmill's device stack ([ADR-0008](../adr/0008-reuse-castmill-device-stack.md)): kiosk shell runs Castmill's device app, `castmillOS` bridge, `CastmillOSMachine` in Castmill
+- [x] Weston kiosk-shell with one kiosk shell per output ([ADR-0004](../adr/0004-sway-kiosk-compositor.md))
+- [x] `castmill.conf` provisioning, factory reset, telemetry, device schedule with display power over HDMI-CEC / DDC/CI
+- [x] Development VM for Apple Silicon Macs; documentation site
 
-- [ ] Production images for x86-64 and Pi 5; read-only rootfs + dm-verity
-- [ ] RAUC A/B with `castmill-health` commit and rollback
-- [x] Reuse Castmill's device stack ([ADR-0008](../adr/0008-reuse-castmill-device-stack.md)): kiosk shell runs Castmill's device app; `castmillOS` bridge; `CastmillOSMachine` in Castmill
-- [ ] OS updates in the Castmill backend: release registry, desired version, channels and staged rollouts, update status
-- [ ] `castmill-agent` v1: updates, maintenance windows, telemetry, health (done in v0.1); screenshots and log upload as Castmill features
-- [ ] Multi-output (independent content), rotation
-- [ ] Per-device content profiles in the Castmill transcoder
-- [ ] Rollout engine v1 in the Castmill backend: channels, manual staged rollouts, status
-- [x] x86 USB installer (to verify on a real PC)
-- [ ] Pi images + Imager entry, `castmill.conf` bulk provisioning
-- [ ] `build.yml` + `qemu-test.yml` + `nightly.yml`; first hardware lab with self-hosted lab runners
-- [ ] `release.yml` with protected signing environment (done: [Release signing](../release-signing.md); keys to create), GitHub Releases (done), Castmill manifest (done: `manifest.json`), provenance attestations
-- [ ] Pilot with internal and friendly-customer screens
+**v0.2**
 
-## Phase 2: Hardening (≈ 3 months)
+- [x] Intel x86-64 USB installer
+- [x] Intel GPU rendering (Mesa `iris`) and hardware video decoding (VA-API, Intel media driver)
+- [x] Hardware details for Castmill's device page (CPU, memory, GPU, acceleration, decoding, display)
+- [x] Raspberry Pi 5 A/B updates with the firmware's tryboot ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md))
+- [x] HTML-in-canvas for widgets
 
-- [ ] UEFI Secure Boot with signed UKIs; TPM-sealed encrypted `data`; TPM-backed identity
-- [ ] Pi 5/CM5 signed boot (optional) documentation and tooling
-- [ ] Automatic rollout halt; security release fast lane
-- [ ] Remote shell with auditing
-- [x] CEC/DDC display power schedules (device schedule; to verify on real displays)
-- [ ] Power-cut and network chaos suites in the lab; 30-day soak gate
-- [ ] SBOM/CVE publication, `SECURITY.md`, advisory process
-- [ ] License compliance artifacts in releases (manifest + GPL/LGPL sources); trademark policy for the Castmill OS name and logo
+## v0.3: managed from Castmill
+
+- [x] OS updates from Castmill ([ADR-0010](../adr/0010-os-updates-from-castmill.md)): release manifest, agent and bridge (Castmill OS); release import, organization policy, device override, update status on the device page (Castmill PR, to merge and deploy)
+- [x] Wi-Fi on site: on-screen setup on the status page and `castmill.conf` from a USB stick, both only while offline
+- [x] Production signing: offline root CA, signing key in a protected, approval-gated release job ([Release signing](../release-signing.md))
+- [ ] Layer versions pinned with `kas lock`, updated deliberately
+- [ ] CVE report published with each release
+- [ ] Castmill dashboard: set a device's location; live online status when the dashboard opens; versioned device-app files (no CDN cache delays after a deploy)
+- [ ] Release candidates: `v0.3.0-rc.1` (first production-signed release; re-flash test devices), then `rc.2` installed by the VM through Castmill
+
+## v0.4: tamper-evident system
+
+- [ ] dm-verity on the system partitions (initramfs or UKI that sets it up), erofs
+- [ ] Fixes from the hardware tests on an Intel mini PC and a Raspberry Pi 5: installer, GPU and video, Pi A/B updates, display power, Wi-Fi on site, OS updates from Castmill
+- [ ] RAM, image size and boot time measured against the targets in [spec 01](01-vision-and-requirements.md)
+- [ ] Video benchmark on both platforms ([spec 06](06-display-and-media.md))
+
+## Feature complete (FC)
+
+The last pre-1.0 release with new features. To be confirmed:
+
+- [ ] UEFI Secure Boot with signed kernel images (x86-64); disk key in the TPM, encrypted `data`
+- [ ] Pi 5 / CM5 signed boot: documentation and tooling (optional per customer)
+- [ ] Multi-output: rotation and modes set from Castmill
+- [ ] Screenshots and log upload as Castmill features
+- [ ] Raspberry Pi Imager entry; bulk provisioning
+- [ ] Staged rollouts and channels in Castmill, automatic halt on rollbacks
+- [ ] `SECURITY.md`, advisory process, license compliance artifacts in releases (GPL/LGPL sources), trademark policy for the Castmill™ name and logo
+
+## v1.0
+
+Only quality gates after FC, no new features:
+
+- [ ] Automated QEMU tests in CI (`qemu-test.yml`): boot, health check, update, rollback; required for every release. Added after FC, as the last step before 1.0.
+- [ ] Provenance attestations for release files
+- [ ] Pilot on real screens and a 30-day soak without incidents
 - [ ] **v1.0 release**
 
-## Phase 3: Expansion
+## After 1.0
 
-- [ ] Native video path (`castmill-videod`) if Phase 0/1 data shows it's needed
+- [ ] Native video path (`castmill-videod`) if measurements show it's needed
 - [ ] Spanned outputs / video walls
 - [ ] Tier 2 hardware: Pi 4, AMD, RK3588
 - [ ] Network-boot installation; LTE modems
-- [ ] GPS/GNSS location for moving screens (USB receivers, LTE modems with GNSS): reported by the agent, answered by `getLocation`, opt-in per organisation. Fixed screens get their location from the Castmill dashboard ([Castmill integration](../castmill-integration.md#location)).
-- [ ] Live remote view (WebRTC)
+- [ ] GPS/GNSS location for moving screens ([Castmill integration](../castmill-integration.md#location))
+- [ ] Remote shell with auditing; live remote view (WebRTC)
+- [ ] Hardware lab with self-hosted runners; power-cut and network chaos tests
+- [ ] Production signing key in a cloud KMS/HSM

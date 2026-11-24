@@ -12,11 +12,11 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 |---|---|---|---|
 | SEC-001 | Read-only ext4 rootfs (`read-only-rootfs`). **dm-verity not yet** (kernel options enabled; needs an initramfs or UKI that sets up verity). The spec asks for erofs/squashfs; ext4 is used until verity lands. | `castmill-os-image.bb` | parsed |
 | SEC-002 | RAUC verity bundles signed with X.509. Release images trust only the production root CA; release bundles are re-signed with the production key in a protected, approval-gated job ([Release signing](release-signing.md)). Development keys sign everything else; all keys outside the repo. Production keys still to be created by the maintainers. | `castmill-os-bundle.bb`, `rauc-conf.bbappend`, `scripts/gen-dev-keys.sh` | parsed |
-| SEC-003 | – (Phase 2: Secure Boot + UKI; Pi signed boot) | | |
+| SEC-003 | – (FC release: Secure Boot + signed kernel images; Pi signed boot) | | |
 | SEC-004 | nftables: drop all inbound except established/related, ICMP errors, IPv6 ND, DHCPv6. SSH only on dev images. | `castmill.nft`, `castmill-dev` | parsed |
 | SEC-005 | **Revised by [ADR-0008](adr/0008-reuse-castmill-device-stack.md):** devices use Castmill's device token from pincode pairing (no per-device certificates or mTLS). Device ID: random, kept on `/data`, new after a factory reset. | Castmill device app, `agent/internal/agent` | tested (ID) |
-| SEC-006 | – (key on `/data`, 0600, agent user; TPM in Phase 2) | | |
-| SEC-007 | – (Phase 2) | | |
+| SEC-006 | – (key on `/data`, 0600, agent user; TPM in the FC release) | | |
+| SEC-007 | – (FC release) | | |
 | SEC-008 | Agent downloads and installs updates automatically; activation per maintenance window or security policy. | `agent/internal/updater` | tested |
 | SEC-009 | SPDX SBOM (`create-spdx`, OE-core default) uploaded by `build.yml`. **CVE report not yet**: Wrynose replaced `cve-check` with `sbom-cve-check`, still to be wired into CI. | `castmill.conf` | parsed |
 | SEC-010 | `player` and `agent` users with fixed UIDs; systemd sandboxing on every Castmill service; polkit limits the agent to rebooting and restarting the session/players; D-Bus policy limits the agent to RAUC's installer interface. Electron: `contextIsolation`, `sandbox`, no Node.js in renderers, navigation allowlist, permissions denied by default. | `castmill-base`, unit files, `player/app` | parsed / tested (player policy) |
@@ -59,7 +59,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | ID | Status | Where | Verified |
 |---|---|---|---|
 | MGT-001 | Through Castmill's device app and dashboard: restart app, reboot device (bridge → agent), refresh, clear cache, telemetry. Screenshots and log upload don't exist in Castmill yet. | `player/app/bridge.js`, agent | tested (bridge) |
-| MGT-002 | – (Phase 2) | | |
+| MGT-002 | – (after 1.0) | | |
 | MGT-003 | The agent is a separate service; the frame watchdog reloads and restarts a hung player. Remote access while the player is down needs Castmill support. | agent | tested |
 | MGT-004 | CPU usage and load, memory, `/data` usage, temperatures, network type, IP and Wi-Fi signal, uptime, in Castmill's `TelemetryData` format. Pi throttling, storage wear and dropped frames aren't in that format yet. | `agent/internal/telemetry` | tested |
 
@@ -86,7 +86,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | ID | Status | Where | Verified |
 |---|---|---|---|
 | LIC-001 | `REUSE.toml` + `LICENSES/`; `reuse lint` passes. Not yet in CI (`checks.yml` job to add). | `REUSE.toml` | tested (locally) |
-| LIC-002 | – (`INCOMPATIBLE_LICENSE` not set yet; impact to check in Phase 0) | | |
+| LIC-002 | – (`INCOMPATIBLE_LICENSE` not set yet; impact to check before FC) | | |
 | LIC-003 | – (release pipeline) | | |
 
 ## Known gaps and decisions to make
@@ -97,4 +97,4 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 - **OS updates from Castmill**: release registry, desired version, rollouts and status in the Castmill backend (follow-up to ADR-0008).
 - **Fallback screen** when the player can't start: the status page is part of the player process; a native fallback (spec 07) is still to do.
 - **Electron app ID on Wayland**: verify `app.setDesktopName` → app ID with Weston kiosk-shell on the first boot (ADR-0004).
-- **dm-verity**, erofs, Secure Boot, TPM, encrypted `/data`: Phase 1–2.
+- **dm-verity** and erofs: v0.4. Secure Boot, TPM, encrypted `/data`: FC release ([roadmap](specs/11-roadmap.md)).

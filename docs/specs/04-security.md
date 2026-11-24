@@ -1,6 +1,6 @@
 # 04 — Security
 
-Status: Draft v0.1 · Related: SEC-*
+Status: v0.3 · Related: SEC-* · Items marked *planned* are not implemented yet ([implementation status](../implementation-status.md)).
 
 ## Threat model (summary)
 
@@ -15,6 +15,8 @@ Status: Draft v0.1 · Related: SEC-*
 
 ## Chain of trust
 
+**Today:** firmware → GRUB (UEFI) or the Pi firmware → kernel → read-only ext4 rootfs. Updates are verified by RAUC (signed verity bundles, see below); boot itself isn't verified yet. *Planned* (dm-verity in v0.4, Secure Boot in the FC release, see the [roadmap](11-roadmap.md)):
+
 - **x86-64:** UEFI Secure Boot → systemd-boot → signed UKI (kernel + initramfs + cmdline with the dm-verity root hash) → dm-verity rootfs. Ship our own Secure Boot keys, with a documented enrollment process for mini PCs (and a shim-based option where custom key enrollment isn't practical).
 - **Raspberry Pi 5 / CM5:** Raspberry Pi signed boot (customer key in OTP) → signed boot image → dm-verity rootfs. Enabling it is **optional and irreversible** per device; document it for customers who need it.
 - **Runtime:** dm-verity checks every block read from the rootfs; corruption or tampering is detected and leads to a reboot or rollback.
@@ -28,12 +30,12 @@ Status: Draft v0.1 · Related: SEC-*
 
 ## Identity and secrets
 
-> **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** devices authenticate with Castmill's device token, obtained through Castmill's pincode pairing, instead of per-device certificates and mutual TLS. The plan below (device keys in the TPM, certificates) becomes a Castmill platform topic, for example binding the device token to a TPM-held key.
+Devices use Castmill's own device identity ([ADR-0008](../adr/0008-reuse-castmill-device-stack.md)):
 
-- At first boot the agent generates a device key pair, **in the TPM** when present, otherwise on the encrypted `data` partition (or plain `data` on Pi without encryption).
-- Enrollment exchanges a pairing code or organization token for a **device certificate** signed by the Castmill device CA.
-- All backend communication uses mutual TLS with that certificate. Certificates are renewed automatically before expiry.
-- Revoking a device in Castmill makes the backend reject it. A factory reset is required to re-enroll.
+- Each screen pairs with a pincode in Castmill's device app and receives a **device token**, stored in that output's kiosk-shell profile on `data` (readable only by the `player` user).
+- The agent keeps a random **device ID** on `data`; a screen's hardware ID is the device ID plus its output name. A factory reset creates a new device ID, so screens must be paired again.
+- Removing a device in Castmill invalidates its token.
+- *Planned:* bind the device token to a TPM-held key where a TPM is present (a Castmill platform feature). The original per-device certificate and mutual-TLS design was replaced by ADR-0008.
 
 ## Data at rest
 
@@ -58,5 +60,5 @@ Status: Draft v0.1 · Related: SEC-*
 
 ## Development vs production
 
-- Development images (SSH, DevTools, debug tools) are signed with development keys only and visibly marked on screen.
-- Production devices must not accept development bundles.
+- Development images (SSH, root login) are visibly marked on screen ("DEVELOPMENT IMAGE") and trust only the development key.
+- Release images trust only the production root CA; release bundles are re-signed with the production key in a protected, approval-gated job. Production devices reject development bundles and the other way round. See [Release signing](../release-signing.md).

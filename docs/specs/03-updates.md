@@ -1,6 +1,6 @@
 # 03 — Updates and rollouts
 
-Status: Draft v0.1 · Related: UPD-*, REL-001/002/005, [ADR-0002](../adr/0002-rauc-ab-updates.md), [ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md)
+Status: v0.3 · Related: UPD-*, REL-001/002/005, [ADR-0002](../adr/0002-rauc-ab-updates.md), [ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md)
 
 ## Principles
 
@@ -54,33 +54,29 @@ Status: Draft v0.1 · Related: UPD-*, REL-001/002/005, [ADR-0002](../adr/0002-ra
 
 Partial package updates and live patching are explicitly out of scope.
 
-## Server side: rollout engine (in Castmill backend)
+## Server side: Castmill decides the version
 
-See [ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md) (status: proposed).
+Implemented as the first stage of [ADR-0005](../adr/0005-update-rollout-in-castmill-backend.md) (option A), designed in [ADR-0010](../adr/0010-os-updates-from-castmill.md):
 
 ### Artifacts
 
-- RAUC bundles are stored in object storage behind a CDN. RAUC streaming needs HTTP range-request support only.
-- Each release has a manifest: `version`, `channel`, `compatible` (hardware family), bundle URL(s), SHA-256, minimum agent version, release notes, `security: bool`.
+- Each release publishes its RAUC bundles and a `manifest.json` (version, pre-release flag, release notes URL, security flag and, per hardware family `compatible`, the bundle URL, SHA-256 and size) as GitHub release files. GitHub serves the HTTP range requests RAUC streaming needs.
+- Castmill imports new manifests from the GitHub releases every hour. A release GitHub marks as pre-release stays a pre-release.
 
-### Rollout model
+### Choosing the version (today)
+
+- **Organization policy:** manual (default), the latest release (pre-releases only if the organization opts in), or a fixed version.
+- **Device override:** follow the organization, or a specific version, optionally activated right away ("update now").
+- Castmill sends each device its target over the device channel (`os_update`); the device reports its progress (`os_update:report`), shown on the device page. Details: [Castmill integration](../castmill-integration.md#os-updates).
+
+### Rollout model (planned)
 
 - **Channels:** `canary` (internal devices) → `beta` (opt-in customers) → `stable`.
 - **Staged rollout** within a channel: 1% → 10% → 50% → 100%, or manual steps.
 - **Automatic halt:** pause if the share of devices that rolled back or became unhealthy goes above a threshold (default 2%) in the current stage.
 - **Targeting:** organization, device group, hardware family, current version.
-- **Pinning:** freeze a device or group on a version (for example during an event).
 
-### Device API (sketch)
-
-> **Revised by [ADR-0008](../adr/0008-reuse-castmill-device-stack.md):** the OS update API is added to the Castmill backend on top of the existing device token and device channel (release registry, desired version, status), not as a separate `/api/os/v1` service. Until then, updates are requested on the device with `castmill-agent update`. See [Castmill integration](../castmill-integration.md#os-updates).
-
-```
-GET  /api/os/v1/devices/{id}/desired     → { version, bundle_url, security, activate_policy }
-POST /api/os/v1/devices/{id}/status      ← { slot_a, slot_b, booted, state, progress, last_error }
-```
-
-Authentication: device mutual-TLS certificate (SEC-005). Alternatively, implement a subset of the Eclipse hawkBit DDI API so the off-the-shelf `rauc-hawkbit-updater` and hawkBit stay possible (see the ADR).
+They only change how the target version is chosen; the device protocol stays the same.
 
 ## Signing and keys
 
