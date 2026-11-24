@@ -150,3 +150,50 @@ func TestApplyKeepsUSBFile(t *testing.T) {
 		t.Fatal("Wi-Fi not applied:", err)
 	}
 }
+
+func TestWiFiCountry(t *testing.T) {
+	zoneTab := func(p Paths) {
+		os.WriteFile(filepath.Join(p.ZoneinfoDir, "zone.tab"),
+			[]byte("ES\t+4024-00341\tEurope/Madrid\tSpain (mainland)\n"), 0o644)
+	}
+	modprobe := func(p Paths) string {
+		b, _ := os.ReadFile(filepath.Join(p.ConfigDir, "wifi-country.conf"))
+		return string(b)
+	}
+
+	// From the time zone.
+	p, _ := setup(t, "[time]\ntimezone = \"Europe/Madrid\"\n")
+	zoneTab(p)
+	if _, err := Apply(p, false, quiet); err != nil {
+		t.Fatal(err)
+	}
+	conf := filepath.Join(p.ConfigDir, "wifi-country.conf")
+	if cc := ApplyWiFiCountry(p, conf, quiet); cc != "ES" ||
+		!strings.Contains(modprobe(p), "ieee80211_regdom=ES\n") {
+		t.Fatalf("country %q, modprobe.d %q", cc, modprobe(p))
+	}
+
+	// castmill.conf wins, in any case.
+	p, _ = setup(t, "[network]\nwifi_country = \"se\"\n\n[time]\ntimezone = \"Europe/Madrid\"\n")
+	zoneTab(p)
+	if _, err := Apply(p, false, quiet); err != nil {
+		t.Fatal(err)
+	}
+	if cc := ApplyWiFiCountry(p, filepath.Join(p.ConfigDir, "wifi-country.conf"), quiet); cc != "SE" {
+		t.Fatalf("country %q", cc)
+	}
+
+	// No country (UTC): no module option.
+	p, _ = setup(t, "")
+	os.MkdirAll(p.ConfigDir, 0o755)
+	if cc := ApplyWiFiCountry(p, filepath.Join(p.ConfigDir, "wifi-country.conf"), quiet); cc != "" ||
+		strings.Contains(modprobe(p), "options") {
+		t.Fatalf("country %q, modprobe.d %q", cc, modprobe(p))
+	}
+
+	// Not a country code.
+	p, _ = setup(t, "[network]\nwifi_country = \"SWE\"\n")
+	if _, err := Apply(p, false, quiet); err == nil || !strings.Contains(err.Error(), "wifi_country") {
+		t.Fatalf("err = %v", err)
+	}
+}

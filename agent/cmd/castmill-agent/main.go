@@ -201,6 +201,11 @@ func runProvision(cfg *config.Agent, log *slog.Logger) error {
 		_ = os.Lchown(p.Localtime, uid, gid)
 	}
 	res, err := provision.Apply(p, cfg.Backend.AllowOverride, log)
+	// Every boot, before NetworkManager: castmill.conf or the time zone
+	// (which Castmill can change) may have changed it.
+	if cc := provision.ApplyWiFiCountry(p, wifiCountryConf(cfg), log); cc != "" {
+		log.Info("Wi-Fi country", "country", cc)
+	}
 	if err != nil {
 		return err
 	}
@@ -210,6 +215,12 @@ func runProvision(cfg *config.Agent, log *slog.Logger) error {
 	}
 	log.Info("provisioning applied", "source", res.Source, "applied", strings.Join(res.Applied, ","))
 	return nil
+}
+
+// wifiCountryConf: the cfg80211 option, linked from
+// /etc/modprobe.d/castmill-wifi-country.conf (castmill-base).
+func wifiCountryConf(cfg *config.Agent) string {
+	return filepath.Join(cfg.ConfigDir(), "wifi-country.conf")
 }
 
 // recordHardware stores serial and model where the unprivileged agent can

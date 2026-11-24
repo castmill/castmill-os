@@ -3,6 +3,7 @@ d /data/castmill                 0755 root   root   -
 d /data/castmill/identity        0700 agent  castmill  -
 d /data/castmill/config          0755 root   root   -
 d /data/castmill/config/network  0700 root   root   -
+f /data/castmill/config/wifi-country.conf 0644 root root -
 d /data/castmill/config/agent    0755 agent  castmill  -
 d /data/castmill/state           0755 agent  castmill  -
 d /data/castmill/player          0750 player castmill -

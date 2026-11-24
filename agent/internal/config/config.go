@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -135,7 +137,10 @@ type Provisioning struct {
 	BackendURL   string `json:"backend_url,omitempty"` // dev images only
 	BackendCA    string `json:"backend_ca,omitempty"`  // PEM, dev images only
 	Timezone     string `json:"timezone,omitempty"`
+	WiFiCountry  string `json:"wifi_country,omitempty"`
 }
+
+var countryCode = regexp.MustCompile(`^[A-Z]{2}$`)
 
 // LoadProvisioning reads provisioning.json; missing file returns an empty value.
 func LoadProvisioning(path string) (*Provisioning, error) {
@@ -167,7 +172,10 @@ type CastmillConf struct {
 			PSK    string `toml:"psk"`
 			Hidden bool   `toml:"hidden"`
 		} `toml:"wifi"`
-		Proxy *struct {
+		// Wi-Fi country (ISO 3166-1 alpha-2, e.g. "SE"); default: the time
+		// zone's country.
+		WiFiCountry string `toml:"wifi_country"`
+		Proxy       *struct {
 			HTTP       string `toml:"http"`
 			HTTPS      string `toml:"https"`
 			NoProxy    string `toml:"no_proxy"`
@@ -193,6 +201,12 @@ func ParseCastmillConf(path string) (*CastmillConf, error) {
 	}
 	if c.Network.WiFi != nil && c.Network.WiFi.SSID == "" {
 		return nil, fmt.Errorf("%s: [network.wifi] needs ssid", path)
+	}
+	if cc := c.Network.WiFiCountry; cc != "" {
+		c.Network.WiFiCountry = strings.ToUpper(cc)
+		if !countryCode.MatchString(c.Network.WiFiCountry) {
+			return nil, fmt.Errorf("%s: [network] wifi_country must be a two-letter country code, like \"SE\"", path)
+		}
 	}
 	return c, nil
 }

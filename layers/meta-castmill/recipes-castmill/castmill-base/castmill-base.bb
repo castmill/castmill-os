@@ -82,6 +82,9 @@ do_install() {
     # Read-only /etc: point the few runtime-configurable files at /data.
     install -d ${D}${sysconfdir}/systemd/timesyncd.conf.d
     ln -sf /data/castmill/config/timesyncd.conf ${D}${sysconfdir}/systemd/timesyncd.conf.d/50-castmill.conf
+    # Wi-Fi country for cfg80211, written by castmill-agent provision.
+    install -d ${D}${sysconfdir}/modprobe.d
+    ln -sf /data/castmill/config/wifi-country.conf ${D}${sysconfdir}/modprobe.d/castmill-wifi-country.conf
     install -d ${D}/data
 }
 do_install[vardeps] += "CASTMILL_UUID_DATA CASTMILL_UUID_BOOT CASTMILL_LOGO"
@@ -103,4 +106,5 @@ RDEPENDS:${PN} = " \
     e2fsprogs-mke2fs e2fsprogs-e2fsck e2fsprogs-resize2fs \
     util-linux-sfdisk util-linux-partx util-linux-blkid util-linux-mount util-linux-mkswap util-linux-swapon \
     nftables networkmanager polkit kmod tzdata \
+    iw wireless-regdb-static \
 "

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/castmill/castmill-os/agent/internal/config"
+	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
 // Paths used by Apply (injectable for tests).
@@ -88,6 +89,11 @@ func Apply(p Paths, allowBackend bool, log *slog.Logger) (*Result, error) {
 			}
 			res.Applied = append(res.Applied, "backend")
 		}
+	}
+
+	if cc := conf.Network.WiFiCountry; cc != "" {
+		prov.WiFiCountry = cc
+		res.Applied = append(res.Applied, "wifi_country")
 	}
 
 	if w := conf.Network.WiFi; w != nil {
@@ -204,4 +210,42 @@ func SetTimezone(zoneinfoDir, localtime, tz string) error {
 		return err
 	}
 	return os.Rename(tmp, localtime)
+}
+
+// WiFiCountry is the Wi-Fi country of the device: castmill.conf's
+// wifi_country, else the country of its time zone (the localtime symlink),
+// else "" (the kernel's worldwide rules).
+func WiFiCountry(configDir, localtime, zoneTab string) string {
+	if prov, err := config.LoadProvisioning(filepath.Join(configDir, "provisioning.json")); err == nil &&
+		wifi.ValidCountry(prov.WiFiCountry) {
+		return prov.WiFiCountry
+	}
+	target, err := os.Readlink(localtime)
+	if err != nil {
+		return ""
+	}
+	zone := target
+	if i := strings.Index(target, "zoneinfo/"); i >= 0 {
+		zone = target[i+len("zoneinfo/"):]
+	}
+	return wifi.CountryForZone(zoneTab, zone)
+}
+
+// ApplyWiFiCountry writes the cfg80211 module option (for a Wi-Fi stack that
+// loads later; /etc/modprobe.d links to it) and sets the country of one
+// that's already loaded. Returns the country ("" for none).
+func ApplyWiFiCountry(p Paths, modprobeConf string, log *slog.Logger) string {
+	cc := WiFiCountry(p.ConfigDir, p.Localtime, filepath.Join(p.ZoneinfoDir, "zone.tab"))
+	if err := config.WriteFileAtomic(modprobeConf, []byte(wifi.ModprobeConf(cc)), 0o644); err != nil {
+		log.Warn("Wi-Fi country module option", "err", err)
+	}
+	if cc == "" {
+		return ""
+	}
+	if _, err := os.Stat("/sys/module/cfg80211"); err == nil {
+		if err := wifi.SetCountry(cc); err != nil {
+			log.Warn("Wi-Fi country", "err", err)
+		}
+	}
+	return cc
 }
