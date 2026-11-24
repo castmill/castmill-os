@@ -11,7 +11,7 @@
 
 **An open source, immutable Linux operating system built for digital signage and the [Castmill](https://castmill.io) player.**
 
-> Status: **initial implementation (v0.1)**. Nothing here is production-ready yet. The specifications in [`docs/specs`](docs/specs) describe what we intend to build and are open for discussion; [implementation status](docs/implementation-status.md) tracks what exists today.
+> Status: **early test releases (v0.2)**. Nothing here is production-ready yet. The specifications in [`docs/specs`](docs/specs) describe what we intend to build and are open for discussion; [implementation status](docs/implementation-status.md) tracks what exists today.
 
 ## Why
 

@@ -37,7 +37,7 @@ Read [How it works](./how-it-works.md) for the details.
 
 ## Supported hardware
 
-| Tier | Hardware | Status in v0.1 |
+| Tier | Hardware | Status in v0.2 |
 |---|---|---|
 | 1 | Intel N100/N150-class mini PCs (x86-64, UEFI) | Image builds; A/B updates |
 | 1 | Raspberry Pi 5 / Compute Module 5 | Image builds; A/B updates with the firmware's tryboot (to verify on a Pi) |
@@ -48,7 +48,7 @@ See [Hardware support](../specs/09-hardware-support.md) for requirements and the
 
 ## Project status
 
-Castmill OS is at **v0.1**, its first test release. The core works (image, A/B updates with rollback, Castmill pairing, the native bridge), but releases are signed with development keys and several security features are still to come. [Implementation status](../implementation-status.md) lists every requirement and how far it's verified, and the [roadmap](../specs/11-roadmap.md) shows what comes next.
+Castmill OS is at **v0.2**, an early test release. The core works in the virtual machine (image, A/B updates with rollback, Castmill pairing, the native bridge); real hardware is being verified, but releases are signed with development keys and several security features are still to come. [Implementation status](../implementation-status.md) lists every requirement and how far it's verified, and the [roadmap](../specs/11-roadmap.md) shows what comes next.
 
 ## Next steps
 

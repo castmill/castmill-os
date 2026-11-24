@@ -10,8 +10,8 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [x] `checks.yml`, `build.yml`, CODEOWNERS, Dependabot (drafts)
 - [x] Initial implementation (v0.1): A/B layout with GRUB boot counting, RAUC config and bundle, read-only rootfs with `/data`, `castmill-agent` + `castmill-health` + provisioning, Weston kiosk session with the Electron kiosk shell. See [implementation status](../implementation-status.md).
 - [ ] GitHub repository with branch rulesets; larger-runner group `castmill-os-builders`; Actions cache limit raised
-- [ ] First green builds of all three targets; measure clean and cached build times (6-hour job limit)
-- [ ] Development VM booting on Apple Silicon Mac (`scripts/run-vm.sh`)
+- [x] First green builds of all three targets (clean and cached build times still to measure)
+- [x] Development VM booting on Apple Silicon Mac (`scripts/run-vm.sh`)
 - [ ] Pin layers with `kas lock`
 - [ ] Compositor decision (ADR-0004)
 - [x] Intel GPU rendering (Mesa `iris`) and VA-API driver (`intel-media-driver` from `meta-intel`); to verify on hardware

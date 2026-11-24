@@ -1,10 +1,10 @@
-# Implementation status (v0.1)
+# Implementation status (v0.2)
 
 What exists for each requirement in [spec 01](specs/01-vision-and-requirements.md), and how far it has been verified.
 
 **Verification levels:** **tested** = covered by automated tests that run in `checks.yml` (`go test`, `npm run check`) · **parsed** = the Yocto metadata parses and its dependency graph resolves (`bitbake -g`), but no image has been built or booted yet · **–** = not started.
 
-> No image has been built or booted yet. The first green `build.yml` run and a boot in the development VM are the next milestones (roadmap Phase 0). Expect fixes in the Yocto layer when that happens.
+> All three targets build in CI, and the development VM boots, pairs with castmill.net and plays content. On real hardware nothing is verified yet: the Intel installer and GPU acceleration, A/B updates on the Raspberry Pi 5 and display power control wait for a test on a device.
 
 ## Security
 
@@ -77,8 +77,8 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 
 | ID | Status | Verified |
 |---|---|---|
-| DEV-001 / 002 | `scripts/run-vm.sh` (2 outputs, watchdog); pairing with castmill.net or a local Castmill backend; `castmill-agent update` for update and rollback tests. | not booted yet |
-| DEV-003 | `build.yml` builds all targets and uploads images. | not run yet |
+| DEV-001 / 002 | `scripts/run-vm.sh` (2 outputs, watchdog); pairing with castmill.net or a local Castmill backend; `castmill-agent update` for update and rollback tests. | booted on an Apple Silicon Mac (QEMU): pairing, playback, telemetry |
+| DEV-003 | `build.yml` builds all targets and uploads images and bundles; `release.yml` publishes them on a version tag. | runs on every push |
 | DEV-004 | `kas/dev.yml` → `castmill-dev` (SSH firewall rule), backend override allowed only there, red "DEVELOPMENT IMAGE" badge on screen. | parsed |
 
 ## Licensing

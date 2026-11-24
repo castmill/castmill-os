@@ -76,7 +76,7 @@ Claim each screen in the Castmill dashboard. See [Pair with Castmill](../setup/p
 
 Intel devices have full A/B updates: a new version is installed in the background into the inactive slot and activated in the maintenance window, with automatic rollback if it doesn't come up healthy. See [Updates and rollback](../operate/updates.md).
 
-## Limitations in v0.1
+## Limitations in v0.2
 
 - Secure Boot, TPM-based disk encryption and dm-verity are planned, not available yet.
 - **GPU acceleration is not yet verified on Intel hardware.** The image has Intel's GPU driver (Mesa `iris`) for rendering and CSS effects, and the Intel media driver for hardware video decoding (H.264, HEVC, VP9, AV1, depending on the GPU). On a development image, `castmill-agent status` shows per screen whether it renders on the GPU and which formats it decodes in hardware.

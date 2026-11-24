@@ -53,8 +53,8 @@ features:
 
 <div class="home-status">
 
-::: warning Early days: v0.1
-Castmill OS is at its first test release. Images are signed with **development keys** and aren't ready for screens in production yet. See the [implementation status](./implementation-status.md) and the [roadmap](./specs/11-roadmap.md).
+::: warning Early days: v0.2
+Castmill OS is in early test releases. Images are signed with **development keys** and aren't ready for screens in production yet. See the [implementation status](./implementation-status.md) and the [roadmap](./specs/11-roadmap.md).
 :::
 
 </div>

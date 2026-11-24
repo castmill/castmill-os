@@ -56,7 +56,7 @@ Recent Raspberry Pi bootloaders try the SD card first, then NVMe, then USB. If t
 
 Claim each screen in the Castmill dashboard with its pincode. See [Pair with Castmill](../setup/pairing.md).
 
-## Limitations in v0.1
+## Limitations in v0.2
 
 - **A/B updates on the Pi are new and not yet verified on a Pi.** They use the firmware's tryboot ([ADR-0009](../adr/0009-raspberry-pi-tryboot.md)). Pis flashed with v0.1.0 have an older partition layout and can't take updates: flash them once with a newer image (the device then has to be paired again).
 - **No boot logo in the bootloader.** The logo shows on the console once Linux starts.
