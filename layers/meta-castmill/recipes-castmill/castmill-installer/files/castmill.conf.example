@@ -1,6 +1,6 @@
 # Castmill OS device configuration. Rename this file to castmill.conf and
 # keep only what you need. Ethernet with DHCP needs no configuration.
-# Reference: https://castmill.github.io/castmill-os/setup/castmill-conf
+# Reference: https://os.castmill.com/setup/castmill-conf
 
 [network.wifi]
 ssid = "Store-Signage"

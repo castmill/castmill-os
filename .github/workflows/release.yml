@@ -69,7 +69,7 @@ jobs:
           Intel/x86-64 PCs: write `castmill-os-installer-genericx86-64.img.xz` to a USB
           stick (Raspberry Pi Imager, balenaEtcher, Rufus) and boot the PC from it.
           Raspberry Pi 5: flash `castmill-os-image-raspberrypi5.rootfs.wic.zst` to the
-          SD card or SSD. Install guides: https://castmill.github.io/castmill-os/install/
+          SD card or SSD. Install guides: https://os.castmill.com/install/
           Updates: serve the `.raucb` bundle to devices built from the same release keys.
           MD
           gh release create "$TAG" dist/* --prerelease --title "Castmill OS ${TAG#v}" \

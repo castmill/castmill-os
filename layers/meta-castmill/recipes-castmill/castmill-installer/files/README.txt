@@ -18,4 +18,4 @@ Castmill OS installer for x86-64 PCs
 
 The same stick installs any number of PCs.
 
-Documentation: https://castmill.github.io/castmill-os/install/intel-x86-64
+Documentation: https://os.castmill.com/install/intel-x86-64

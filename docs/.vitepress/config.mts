@@ -7,11 +7,13 @@ const REPO = 'https://github.com/castmill/castmill-os'
 const DOCS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 
-// Project pages by default (castmill.github.io/castmill-os/). A custom domain
-// sets DOCS_BASE=/ in the deploy workflow.
-const base = process.env.DOCS_BASE ?? '/castmill-os/'
+// Served at https://os.castmill.com/ (GitHub Pages custom domain). Set
+// DOCS_BASE and DOCS_ORIGIN to build for another address, for example
+// DOCS_BASE=/castmill-os/ DOCS_ORIGIN=https://<owner>.github.io for a fork's
+// project pages.
+const base = process.env.DOCS_BASE ?? '/'
 // Absolute URL of the site, for link previews (og:image must be absolute).
-const SITE_URL = `${process.env.DOCS_ORIGIN ?? 'https://castmill.github.io'}${base}`
+const SITE_URL = `${process.env.DOCS_ORIGIN ?? 'https://os.castmill.com'}${base}`
 const SOCIAL_DESCRIPTION =
   'Open source, immutable and self-healing Linux for digital signage. One signed image that updates itself safely and never needs a visit.'
 
