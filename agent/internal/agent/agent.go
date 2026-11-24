@@ -36,6 +36,7 @@ import (
 	"github.com/castmill/castmill-os/agent/internal/system"
 	"github.com/castmill/castmill-os/agent/internal/telemetry"
 	"github.com/castmill/castmill-os/agent/internal/updater"
+	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
 // Version is set at build time (-ldflags "-X ...agent.Version=...").
@@ -48,6 +49,7 @@ type Agent struct {
 	RAUC    rauc.Client    // nil disables updates (e.g. running on a workstation)
 	Systemd system.Manager // nil disables unit control and reboots
 	SysRoot string         // "/" on a device
+	WiFi    wifi.Client    // nil: no on-screen Wi-Fi setup
 
 	machineID string
 	prov      *config.Provisioning
@@ -220,6 +222,10 @@ func (a *Agent) call(ctx context.Context, output, method string, args json.RawMe
 		return nil, a.setTimers(output, args)
 	case "gpu_report":
 		return nil, a.gpuReport(output, args)
+	case "wifi_status":
+		return a.wifiStatus(ctx)
+	case "wifi_connect":
+		return nil, a.wifiConnect(ctx, output, args)
 	case "set_os_update":
 		return nil, a.setOSUpdate(output, args)
 	case "os_update_status":

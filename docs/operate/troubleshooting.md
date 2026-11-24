@@ -31,7 +31,7 @@ journalctl -b -u 'castmill-player@*'        # the kiosk shells, one per output
 ### The status page says Castmill isn't reachable
 
 - **Ethernet:** check the cable and that the network gives out addresses with DHCP.
-- **Wi-Fi:** check the `ssid` and `psk` in [`castmill.conf`](../setup/castmill-conf.md). A file with an error stays on the boot partition and isn't applied.
+- **Wi-Fi:** set it up on the status page with a USB keyboard, or with a USB stick ([Wi-Fi on site](../setup/wifi.md)). With `castmill.conf` on the boot partition, check its `ssid` and `psk`: a file with an error stays on the boot partition and isn't applied.
 - **Firewalls and proxies:** the device needs outgoing HTTPS (port 443) to the Castmill server. Behind a proxy, set [`[network.proxy]`](../setup/castmill-conf.md#proxy); behind a TLS-inspecting proxy, add its CA certificate.
 - The device retries every 30 seconds, so it recovers by itself once the network is fixed.
 

@@ -102,6 +102,7 @@ const guideSidebar: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Pair with Castmill', link: '/setup/pairing' },
       { text: 'castmill.conf', link: '/setup/castmill-conf' },
+      { text: 'Wi-Fi on site', link: '/setup/wifi' },
     ],
   },
   {

@@ -1,6 +1,7 @@
 // Castmill OS polkit rules (spec 04 "Least privilege").
-// The agent may reboot the device and restart the graphical session and the
-// player instances; nothing else.
+// The agent may reboot the device, restart the graphical session and the
+// player instances, and set up Wi-Fi (scan, add and activate a connection)
+// for the on-screen setup, which it only allows while the device is offline.
 polkit.addRule(function (action, subject) {
     if (subject.user !== "agent") {
         return polkit.Result.NOT_HANDLED;
@@ -8,6 +9,11 @@ polkit.addRule(function (action, subject) {
     if (action.id === "org.freedesktop.login1.reboot" ||
         action.id === "org.freedesktop.login1.reboot-multiple-sessions" ||
         action.id === "org.freedesktop.login1.reboot-ignore-inhibit") {
+        return polkit.Result.YES;
+    }
+    if (action.id === "org.freedesktop.NetworkManager.wifi.scan" ||
+        action.id === "org.freedesktop.NetworkManager.network-control" ||
+        action.id === "org.freedesktop.NetworkManager.settings.modify.system") {
         return polkit.Result.YES;
     }
     if (action.id === "org.freedesktop.systemd1.manage-units") {

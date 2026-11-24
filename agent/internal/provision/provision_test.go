@@ -136,3 +136,17 @@ func TestTimezoneValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestApplyKeepsUSBFile(t *testing.T) {
+	p, src := setup(t, full)
+	p.Keep = true
+	if _, err := Apply(p, false, quiet); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(src); err != nil {
+		t.Fatal("castmill.conf removed from the USB stick:", err)
+	}
+	if _, err := os.Stat(filepath.Join(p.NMDir, "castmill-wifi.nmconnection")); err != nil {
+		t.Fatal("Wi-Fi not applied:", err)
+	}
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=Castmill OS castmill.conf from USB stick (%I)
+Documentation=https://os.castmill.com/setup/castmill-conf
+# Started by udev for each FAT/exFAT partition of a USB stick
+# (61-castmill-usb.rules). Applies castmill.conf only while the device is
+# offline; the file stays on the stick.
+After=NetworkManager.service castmill-provision.service
+Requires=NetworkManager.service
+RequiresMountsFor=/data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/castmill-agent provision-usb /dev/%I
+TimeoutStartSec=90
+PrivateNetwork=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes

@@ -97,7 +97,7 @@ Between the kiosk shell and `castmill-agent`, local only: `/run/castmill-agent/p
 |---|---|
 | shell → agent | `{"type":"hello","output":"HDMI-A-1"}` |
 | shell → agent | `{"type":"frame","output":"HDMI-A-1"}`: frame-rendered heartbeat (health check, watchdog) |
-| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `hardware_info` (`{cpu, memory}`), `set_os_update`, `os_update_status`, `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
+| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `hardware_info` (`{cpu, memory}`), `set_os_update`, `os_update_status`, `wifi_status` and `wifi_connect` (status page only, offline only), `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
 | agent → shell | `{"type":"reply","id":"7","ok":true,"data":{…}}` or `{"type":"reply","id":"7","error":"…"}` |
 | agent → shell | `{"type":"state","state":{"player_url","dev_image","os_version","device_name","online","backend_error"}}` |
 | agent → shell | `{"type":"reload"}`: no frames for 30 s (recovery layer 1, spec 05) |

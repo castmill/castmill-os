@@ -4,11 +4,15 @@
 
 ## How it's applied
 
-1. Put `castmill.conf` in the root of the **boot** partition (the FAT partition your computer shows after flashing), or on a USB stick plugged into the device.
+**On the boot partition:**
+
+1. Put `castmill.conf` in the root of the **boot** partition (the FAT partition your computer shows after flashing).
 2. At boot, `castmill-provision` applies it before the network and the agent start.
 3. The file is then moved to `/data` and **deleted from the boot partition**, so Wi-Fi passwords don't stay there in plain text.
 
-It works on every boot, not just the first: to change the Wi-Fi of a device in the field, put a new `castmill.conf` on its boot partition or on a USB stick and reboot.
+It works on every boot, not just the first: to change the Wi-Fi of a device in the field, put a new `castmill.conf` on its boot partition and reboot.
+
+**On a USB stick:** plug a FAT or exFAT stick with `castmill.conf` in its root into the device. It's applied right away, **only while the device is offline**, and the file stays on the stick for the next device. See [Wi-Fi on site](./wifi.md), which also explains the on-screen setup.
 
 ::: warning Typos stop the file
 Unknown keys are rejected so a typo can't leave a device silently unconfigured. If the file has an error, nothing in it is applied, it stays on the boot partition so you can fix it, and the error is logged by `castmill-provision`.

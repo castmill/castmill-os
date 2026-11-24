@@ -28,6 +28,9 @@ type Paths struct {
 	ZoneinfoDir  string   // /usr/share/zoneinfo
 	AgentUID     int      // owner of agent-readable files, -1 to skip chown
 	AgentGID     int
+	// Keep leaves castmill.conf where it is (a USB stick used for many
+	// devices); otherwise it is deleted after it was applied.
+	Keep bool
 }
 
 // DefaultSources: boot partition first, then any mounted USB stick.
@@ -145,6 +148,9 @@ func Apply(p Paths, allowBackend bool, log *slog.Logger) (*Result, error) {
 	raw, _ := os.ReadFile(src)
 	if err := config.WriteFileAtomic(filepath.Join(p.ConfigDir, "castmill.conf.applied"), raw, 0o600); err != nil {
 		return nil, err
+	}
+	if p.Keep {
+		return res, nil
 	}
 	if err := os.Remove(src); err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Warn("could not delete provisioning file (read-only medium?)", "path", src, "err", err)

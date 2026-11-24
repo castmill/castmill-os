@@ -8,3 +8,15 @@ main { height: 100%; display: flex; flex-direction: column; align-items: center;
 .facts dt { text-align: right; }
 .facts dd { margin: 0; text-align: left; color: #c9ced4; font-family: monospace; }
 .dev { position: fixed; right: 1vw; bottom: 1vh; background: #c00; color: #fff; font-weight: 700; padding: .5vh 1vw; }
+.wifi { width: min(70vw, 640px); text-align: left; }
+.wifi h2 { font-size: 2.6vh; font-weight: 600; margin: 0; color: #e8eaed; }
+.networks { list-style: none; margin: 1.5vh 0 0; padding: 0; display: grid; gap: .8vh; max-height: 30vh; overflow-y: auto; }
+.networks button, .wifi button { font: inherit; font-size: 2.2vh; }
+.networks button { width: 100%; text-align: left; padding: 1.2vh 1.4vw; background: #1a1e24; color: #e8eaed; border: 1px solid #2d333b; border-radius: 6px; }
+.networks button:focus, .networks button:hover { border-color: #fb923c; outline: none; }
+.wifi form { display: grid; gap: 1.2vh; margin-top: 2vh; }
+.wifi label { display: grid; gap: .6vh; font-size: 2vh; color: #b0b6bd; }
+.wifi input { font: inherit; font-size: 2.4vh; padding: 1vh 1vw; background: #0f1216; color: #e8eaed; border: 1px solid #3a414a; border-radius: 6px; }
+.wifi .actions { display: flex; gap: 1vw; }
+.wifi .actions button { padding: 1vh 2vw; border-radius: 6px; border: 0; background: #c2410c; color: #fff; }
+.wifi .actions button.secondary { background: #2d333b; }

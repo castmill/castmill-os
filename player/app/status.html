@@ -19,6 +19,20 @@
     <dt>Version</dt><dd id="version">–</dd>
     <dt>Castmill</dt><dd id="online">–</dd>
   </dl>
+  <section id="wifi" class="wifi" hidden>
+    <h2>Wi-Fi</h2>
+    <p class="detail">Connect this device to the venue's Wi-Fi. Use a USB keyboard and mouse, or a touchscreen.</p>
+    <ul id="wifi-networks" class="networks"></ul>
+    <form id="wifi-form" hidden>
+      <label id="wifi-ssid-label" hidden>Network name <input id="wifi-ssid" autocomplete="off" maxlength="32"></label>
+      <label id="wifi-psk-label">Password <input id="wifi-psk" type="password" autocomplete="off" maxlength="64"></label>
+      <div class="actions">
+        <button type="submit" id="wifi-join">Connect</button>
+        <button type="button" id="wifi-cancel" class="secondary">Cancel</button>
+      </div>
+    </form>
+    <p id="wifi-message" class="detail" role="status"></p>
+  </section>
   <div id="dev" class="dev" hidden>DEVELOPMENT IMAGE</div>
 </main>
 <script src="status.js"></script>

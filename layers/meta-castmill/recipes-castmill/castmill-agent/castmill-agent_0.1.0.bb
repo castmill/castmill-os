@@ -23,6 +23,8 @@ SRC_URI = " \
     file://castmill-provision.service \
     file://60-castmill-display.rules \
     file://castmill-display.conf \
+    file://castmill-usb-provision@.service \
+    file://61-castmill-usb.rules \
 "
 require castmill-agent-go-mods.inc
 
@@ -60,7 +62,7 @@ do_install() {
 
     install -d ${D}${systemd_system_unitdir}
     for u in castmill-agent.service castmill-health.service castmill-health-report.service \
-             castmill-health-report.timer castmill-provision.service; do
+             castmill-health-report.timer castmill-provision.service castmill-usb-provision@.service; do
         install -m 0644 ${UNPACKDIR}/$u ${D}${systemd_system_unitdir}/
     done
 
@@ -69,6 +71,10 @@ do_install() {
         ${D}${nonarch_base_libdir}/udev/rules.d/60-castmill-display.rules
     install -D -m 0644 ${UNPACKDIR}/castmill-display.conf \
         ${D}${nonarch_libdir}/modules-load.d/castmill-display.conf
+
+    # castmill.conf on a USB stick (applied while offline).
+    install -D -m 0644 ${UNPACKDIR}/61-castmill-usb.rules \
+        ${D}${nonarch_base_libdir}/udev/rules.d/61-castmill-usb.rules
 }
 do_install[vardeps] += "CASTMILL_BACKEND_URL CASTMILL_BACKEND_CA CASTMILL_DEV_IMAGE CASTMILL_COMPATIBLE"
 

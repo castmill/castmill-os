@@ -283,6 +283,23 @@ ipcMain.on('castmill:frame', (e) => {
   if (win && e.sender === win.webContents) agent.send({ type: 'frame', output: OUTPUT });
 });
 
+// On-screen Wi-Fi setup: only from the local status page in the main window.
+// The agent refuses changes while the device is online.
+ipcMain.handle('castmill:wifi', async (e, action, args) => {
+  const frame = e.senderFrame;
+  if (!win || e.sender !== win.webContents || !frame || frame !== win.webContents.mainFrame ||
+      current.view !== 'status' || !frame.url.startsWith('file://')) {
+    throw new Error('Wi-Fi setup is only available on the status page');
+  }
+  if (action === 'status') return agent.call('wifi_status');
+  if (action === 'connect') {
+    const { ssid, psk, hidden } = args || {};
+    log('on-screen Wi-Fi setup: joining', JSON.stringify(String(ssid)));
+    return agent.call('wifi_connect', { ssid: String(ssid), psk: String(psk ?? ''), hidden: !!hidden }, 35_000);
+  }
+  throw new Error(`unknown Wi-Fi action ${action}`);
+});
+
 // castmillOS bridge: Machine calls from the Castmill device app.
 ipcMain.handle('castmill:machine', async (e, method, args) => {
   const frame = e.senderFrame;

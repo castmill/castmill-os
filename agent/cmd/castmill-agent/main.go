@@ -6,6 +6,9 @@
 //	                           (castmill-health.service, root)
 //	castmill-agent health --report-only   periodic check (castmill-health.timer)
 //	castmill-agent provision   apply castmill.conf (castmill-provision.service, root)
+//	castmill-agent provision-usb /dev/PARTITION
+//	                           apply castmill.conf from a USB stick while offline
+//	                           (castmill-usb-provision@.service, root, started by udev)
 //	castmill-agent update URL VERSION [--now]
 //	                           install an OS update bundle (development and support;
 //	                           Castmill-driven OS updates come with the backend support)
@@ -42,6 +45,7 @@ import (
 	"github.com/castmill/castmill-os/agent/internal/session"
 	"github.com/castmill/castmill-os/agent/internal/state"
 	"github.com/castmill/castmill-os/agent/internal/system"
+	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
 func main() {
@@ -83,6 +87,8 @@ func main() {
 		err = runHealth(ctx, cfg, log, *reportOnly)
 	case "provision":
 		err = runProvision(cfg, log)
+	case "provision-usb":
+		err = runProvisionUSB(cfg, log, fs.Arg(0))
 	case "status":
 		err = printStatus(cfg)
 	case "session-config":
@@ -124,6 +130,12 @@ func run(ctx context.Context, cfg *config.Agent, log *slog.Logger) error {
 	} else {
 		a.Systemd = m
 	}
+	if w, err := wifi.Connect(); err != nil {
+		log.Warn("NetworkManager not available; no on-screen Wi-Fi setup", "err", err)
+	} else {
+		defer w.Close()
+		a.WiFi = w
+	}
 	return a.Run(ctx)
 }
 
@@ -158,14 +170,14 @@ func runHealth(ctx context.Context, cfg *config.Agent, log *slog.Logger, reportO
 	return nil
 }
 
-func runProvision(cfg *config.Agent, log *slog.Logger) error {
+func provisionPaths(cfg *config.Agent, sources []string) provision.Paths {
 	uid, gid := -1, -1
 	if u, err := user.Lookup("agent"); err == nil {
 		uid, _ = strconv.Atoi(u.Uid)
 		gid, _ = strconv.Atoi(u.Gid)
 	}
-	p := provision.Paths{
-		Sources:      provision.DefaultSources(cfg.Paths.BootDir),
+	return provision.Paths{
+		Sources:      sources,
 		NMDir:        filepath.Join(cfg.ConfigDir(), "network"),
 		ConfigDir:    cfg.ConfigDir(),
 		TimesyncConf: filepath.Join(cfg.ConfigDir(), "timesyncd.conf"),
@@ -174,6 +186,11 @@ func runProvision(cfg *config.Agent, log *slog.Logger) error {
 		ZoneinfoDir:  "/usr/share/zoneinfo",
 		AgentUID:     uid, AgentGID: gid,
 	}
+}
+
+func runProvision(cfg *config.Agent, log *slog.Logger) error {
+	p := provisionPaths(cfg, provision.DefaultSources(cfg.Paths.BootDir))
+	uid, gid := p.AgentUID, p.AgentGID
 	if err := recordHardware(cfg); err != nil {
 		log.Warn("hardware info", "err", err)
 	}

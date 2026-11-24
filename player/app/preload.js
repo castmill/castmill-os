@@ -5,7 +5,8 @@
 // - Exposes window.castmillOS (bridge version 1) to web pages: the Castmill
 //   device app uses it as its Machine (docs/castmill-integration.md). The main
 //   process answers only the main frame of the Castmill origin.
-// - Gives the local status page (file://) read-only state updates.
+// - Gives the local status page (file://) state updates and, while the
+//   device is offline, the on-screen Wi-Fi setup.
 
 const { ipcRenderer, contextBridge } = require('electron');
 
@@ -33,5 +34,8 @@ if (location.protocol === 'https:' || location.protocol === 'http:') {
 if (location.protocol === 'file:') {
   contextBridge.exposeInMainWorld('castmillKiosk', {
     onState: (cb) => ipcRenderer.on('castmill:state', (_e, s) => cb(s)),
+    wifiStatus: () => ipcRenderer.invoke('castmill:wifi', 'status'),
+    wifiConnect: (ssid, psk, hidden) =>
+      ipcRenderer.invoke('castmill:wifi', 'connect', { ssid: String(ssid), psk: String(psk), hidden: !!hidden }),
   });
 }

@@ -1,0 +1,4 @@
+# castmill.conf on a USB stick: check every FAT/exFAT filesystem on a USB
+# disk (castmill-usb-provision@.service; applied only while offline).
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{ID_FS_TYPE}=="vfat|exfat", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}+="castmill-usb-provision@%k.service"
