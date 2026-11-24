@@ -67,6 +67,10 @@ func runProvisionUSB(cfg *config.Agent, log *slog.Logger, dev string) error {
 		return fmt.Errorf("castmill.conf on %s: %w", dev, err)
 	}
 	log.Info("castmill.conf applied from USB stick", "device", dev, "applied", strings.Join(res.Applied, ","))
+	// Before joining: the country decides which channels the scan sees.
+	if cc := provision.ApplyWiFiCountry(p, wifiCountryConf(cfg), log); cc != "" {
+		log.Info("Wi-Fi country", "country", cc)
+	}
 	if slices.Contains(res.Applied, "wifi") {
 		if err := nm.ReloadConnections(ctx); err != nil {
 			log.Warn("NetworkManager reload", "err", err)

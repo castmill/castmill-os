@@ -27,6 +27,7 @@ Castmill OS moves to 1.0 in releases. Each one is a GitHub pre-release that can 
 
 - [x] OS updates from Castmill ([ADR-0010](../adr/0010-os-updates-from-castmill.md)): release manifest, agent and bridge (Castmill OS); release import, organization policy, device override, update status on the device page (Castmill PR, to merge and deploy)
 - [x] Wi-Fi on site: on-screen setup on the status page and `castmill.conf` from a USB stick, both only while offline
+- [x] Wi-Fi in the player menu, for paired devices that play from their cache while offline (needs the Castmill PR); Wi-Fi country from `castmill.conf` or the time zone
 - [x] Production signing: offline root CA, signing key in a protected, approval-gated release job ([Release signing](../release-signing.md))
 - [x] Layer versions pinned (`kas/*.lock.yml`, updated with `scripts/lock-layers.py`)
 - [x] CVE report published with each release (`sbom-cve-check` on each image's SBOM)

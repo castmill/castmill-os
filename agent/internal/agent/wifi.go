@@ -9,16 +9,18 @@ import (
 	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
-// On-screen Wi-Fi setup (kiosk shell status page). Only while the device is
-// offline: a screen that works can't have its network changed by whoever
-// plugs in a keyboard. The kiosk shell only forwards these calls from its
-// local status page, never from Castmill's device app.
+// On-screen Wi-Fi setup: the kiosk shell's status page (a device that never
+// loaded the device app) and the Wi-Fi entry of the device app's menu (a
+// device playing from its cache), both through the kiosk shell. Changes only
+// while the device is offline: a screen that works can't have its network
+// changed by whoever plugs in a keyboard or touches it.
 
 // WiFiStatus answers wifi_status.
 type WiFiStatus struct {
 	Available bool           `json:"available"` // the device has Wi-Fi
 	Online    bool           `json:"online"`
-	Networks  []wifi.Network `json:"networks"`
+	Current   *wifi.Network  `json:"current,omitempty"` // the network it's connected to
+	Networks  []wifi.Network `json:"networks"`          // in range; only while offline
 	Error     string         `json:"error,omitempty"`
 }
 
@@ -33,6 +35,12 @@ func (a *Agent) wifiStatus(ctx context.Context) (WiFiStatus, error) {
 		return WiFiStatus{}, fmt.Errorf("network status: %w", err)
 	}
 	s := WiFiStatus{Available: true, Online: online, Networks: []wifi.Network{}}
+	current, err := a.WiFi.Current(ctx)
+	if errors.Is(err, wifi.ErrNoWiFi) {
+		s.Available = false // e.g. online over Ethernet, without a Wi-Fi adapter
+		return s, nil
+	}
+	s.Current = current
 	if online {
 		return s, nil
 	}

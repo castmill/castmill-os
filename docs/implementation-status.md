@@ -71,7 +71,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | PRV-002 | Pi image as `wic.zst` + `bmap` (flashable with bmaptool; Imager JSON later). | `kas/rpi5.yml` | parsed |
 | PRV-003 | Castmill's pincode and QR code on screen (Castmill device app). Zero-touch bulk enrollment with an organization token needs Castmill support. | Castmill device app | – |
 | PRV-004 | – | | |
-| PRV-005 | `castmill.conf`: Wi-Fi, proxy (+ CA), NTP, time zone; moved into `/data` and deleted from the boot partition. From a USB stick (udev, `provision-usb`) and the on-screen Wi-Fi setup of the status page, both only while offline ([Wi-Fi on site](setup/wifi.md)). Proxy CA isn't imported into Chromium yet. | `agent/internal/provision`, `agent/internal/wifi`, `player/app/status.js` | tested; on-screen Wi-Fi checked in the VM up to the join (no Wi-Fi adapter there) |
+| PRV-005 | `castmill.conf`: Wi-Fi, proxy (+ CA), NTP, time zone; moved into `/data` and deleted from the boot partition. From a USB stick (udev, `provision-usb`) and the on-screen Wi-Fi setup of the status page and of the device menu (`getWifiStatus`/`connectWifi` bridge calls), all only while offline ([Wi-Fi on site](setup/wifi.md)). Wi-Fi country (`wifi_country`, else the time zone's country) as a cfg80211 module option and `iw reg set`, with `wireless-regdb`. Proxy CA isn't imported into Chromium yet. | `agent/internal/provision`, `agent/internal/wifi`, `player/app/status.js`, `player/app/bridge.js` | tested; on-screen Wi-Fi checked in the VM up to the join (no Wi-Fi adapter there); menu and Wi-Fi country untested on hardware |
 
 ## Development
 

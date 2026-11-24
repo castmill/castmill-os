@@ -14,9 +14,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
 // DefaultPath is where the image installs the agent configuration.
@@ -135,6 +138,7 @@ type Provisioning struct {
 	BackendURL   string `json:"backend_url,omitempty"` // dev images only
 	BackendCA    string `json:"backend_ca,omitempty"`  // PEM, dev images only
 	Timezone     string `json:"timezone,omitempty"`
+	WiFiCountry  string `json:"wifi_country,omitempty"`
 }
 
 // LoadProvisioning reads provisioning.json; missing file returns an empty value.
@@ -167,7 +171,10 @@ type CastmillConf struct {
 			PSK    string `toml:"psk"`
 			Hidden bool   `toml:"hidden"`
 		} `toml:"wifi"`
-		Proxy *struct {
+		// Wi-Fi country (ISO 3166-1 alpha-2, e.g. "SE"); default: the time
+		// zone's country.
+		WiFiCountry string `toml:"wifi_country"`
+		Proxy       *struct {
 			HTTP       string `toml:"http"`
 			HTTPS      string `toml:"https"`
 			NoProxy    string `toml:"no_proxy"`
@@ -193,6 +200,12 @@ func ParseCastmillConf(path string) (*CastmillConf, error) {
 	}
 	if c.Network.WiFi != nil && c.Network.WiFi.SSID == "" {
 		return nil, fmt.Errorf("%s: [network.wifi] needs ssid", path)
+	}
+	if cc := c.Network.WiFiCountry; cc != "" {
+		c.Network.WiFiCountry = strings.ToUpper(cc)
+		if !wifi.ValidCountry(c.Network.WiFiCountry) {
+			return nil, fmt.Errorf("%s: [network] wifi_country %q is not a country code (ISO 3166), like \"SE\"", path, cc)
+		}
 	}
 	return c, nil
 }

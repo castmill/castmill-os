@@ -1,7 +1,8 @@
 // Package wifi sets up Wi-Fi on site through NetworkManager's D-Bus API: the
 // networks in range, joining one, and whether the device is online. Used for
-// the on-screen Wi-Fi setup of the kiosk shell's status page and for
-// castmill.conf on a USB stick, both only while the device is offline.
+// the on-screen Wi-Fi setup (the kiosk shell's status page and the player
+// menu) and for castmill.conf on a USB stick, all only while the device is
+// offline.
 //
 // D-Bus instead of nmcli keeps the Wi-Fi password off command lines, where
 // other local processes could read it.
@@ -36,10 +37,16 @@ type Client interface {
 	Online(ctx context.Context) (bool, error)
 	// Scan lists the networks in range, strongest first.
 	Scan(ctx context.Context) ([]Network, error)
+	// Current is the network the device is connected to (nil when none),
+	// without scanning. ErrNoWiFi when the device has no Wi-Fi.
+	Current(ctx context.Context) (*Network, error)
 	// Join connects to a network and keeps it as castmill-wifi, replacing
 	// the previous one only once the new one works.
 	Join(ctx context.Context, ssid, psk string, hidden bool) error
 }
+
+// ErrNoWiFi: the device has no Wi-Fi adapter.
+var ErrNoWiFi = errors.New("this device has no Wi-Fi")
 
 var hexKey = regexp.MustCompile(`^[0-9a-fA-F]{64}$`)
 
@@ -115,7 +122,30 @@ func (n *NM) wifiDevice(ctx context.Context) (dbus.ObjectPath, error) {
 			}
 		}
 	}
-	return "", errors.New("this device has no Wi-Fi")
+	return "", ErrNoWiFi
+}
+
+// Current implements Client.
+func (n *NM) Current(ctx context.Context) (*Network, error) {
+	dev, err := n.wifiDevice(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ap, err := prop[dbus.ObjectPath](n.obj(dev), wirelessIface+".ActiveAccessPoint")
+	if err != nil || ap == "" || ap == "/" {
+		return nil, nil
+	}
+	o := n.obj(ap)
+	ssid, err := prop[[]byte](o, apIface+".Ssid")
+	if err != nil || len(ssid) == 0 {
+		return nil, nil
+	}
+	strength, _ := prop[byte](o, apIface+".Strength")
+	flags, _ := prop[uint32](o, apIface+".Flags")
+	wpa, _ := prop[uint32](o, apIface+".WpaFlags")
+	rsn, _ := prop[uint32](o, apIface+".RsnFlags")
+	return &Network{SSID: string(ssid), Signal: int(strength),
+		Secure: flags&1 != 0 || wpa != 0 || rsn != 0, Active: true}, nil
 }
 
 // Scan implements Client.
