@@ -28,6 +28,12 @@
   justify-content: center;
 }
 
+/* Keep the blurred glow behind the boot card on its own cached layer, so
+   repaints nearby don't re-rasterize it (it flickered as a dark box). */
+.VPHero .image-bg {
+  will-change: transform;
+}
+
 /* Feature cards: a subtle lift on hover. */
 .VPFeature {
   transition: border-color 0.25s, transform 0.25s;

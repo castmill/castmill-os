@@ -14,6 +14,8 @@ const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const base = process.env.DOCS_BASE ?? '/'
 // Absolute URL of the site, for link previews (og:image must be absolute).
 const SITE_URL = `${process.env.DOCS_ORIGIN ?? 'https://os.castmill.com'}${base}`
+// The current Castmill OS release (nav menu, boot card on the home page).
+const RELEASE = '0.2.0'
 const SOCIAL_DESCRIPTION =
   'Open source, immutable and self-healing Linux for digital signage. One signed image that updates itself safely and never needs a visit.'
 
@@ -170,6 +172,7 @@ export default defineConfig({
   },
 
   themeConfig: {
+    release: RELEASE,
     logo: '/logo.svg',
     siteTitle: 'Castmill OS',
 
@@ -188,7 +191,7 @@ export default defineConfig({
         ],
       },
       {
-        text: 'v0.1',
+        text: `v${RELEASE.replace(/\.0$/, '')}`,
         items: [
           { text: 'Releases', link: `${REPO}/releases` },
           { text: 'Contributing', link: `${REPO}/blob/main/CONTRIBUTING.md` },

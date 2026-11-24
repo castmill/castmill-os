@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useData } from 'vitepress'
 // The same logo the device prints on the console at boot.
 import logo from '../../../layers/meta-castmill/files/branding/logo.txt?raw'
+
+const { theme } = useData()
 </script>
 
 <template>
@@ -8,7 +11,7 @@ import logo from '../../../layers/meta-castmill/files/branding/logo.txt?raw'
     <div class="bar" aria-hidden="true"><span /><span /><span /><em>tty1</em></div>
     <pre class="art">{{ logo.replace(/\n+$/, '') }}</pre>
     <p class="info">
-      Castmill OS 0.1.0 - raspberrypi5 - slot A<span class="cursor" aria-hidden="true">▍</span>
+      Castmill OS {{ theme.release }} - raspberrypi5 - slot A<span class="cursor" aria-hidden="true">▍</span>
     </p>
   </figure>
 </template>
@@ -64,6 +67,10 @@ import logo from '../../../layers/meta-castmill/files/branding/logo.txt?raw'
 .cursor {
   color: #ff7a3d;
   animation: blink 1.1s steps(1) infinite;
+  /* Own compositor layer: the blink never repaints the card, which made
+     browsers re-rasterize the blurred hero glow behind it (a dark box
+     flashing above the card). */
+  will-change: opacity;
 }
 @keyframes blink {
   50% {
