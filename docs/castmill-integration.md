@@ -49,6 +49,8 @@ Every call is checked by the main process. It must come from the window's **main
 | `getMachineGUID` | – | agent | `<device id>-<output>`, stable until a factory reset |
 | `getDeviceInfo` | – | agent + kiosk shell | `{appType: "Castmill OS", appVersion, os, hardware, environmentVersion, chromiumVersion, v8Version, nodeVersion}`; the device app adds `userAgent` |
 | `getHardwareInfo` | – | agent + kiosk shell | `{cpu, memory, gpu, graphicsAcceleration: "hardware" \| "software", videoDecoding: ["H.264", …], display}`; waits up to 20 s for the GPU probe. Separate from `getDeviceInfo` because Castmill servers reject device info with unknown keys: only a device app that knows these fields asks for them (Castmill's `CastmillOSMachine` merges them into its device info) |
+| `setOsUpdate` | `target` | agent | The OS version Castmill wants: `{version, url, sha256, size, security, activate, override}`, or `{version: null}`. See [OS updates](#os-updates) |
+| `getOsUpdateStatus` | – | agent | `{compatible, current_version, target_version, state, version, progress, last_error, updated}` |
 | `getTelemetry` | – | agent | Castmill `TelemetryData`: storage (the data partition), memory, CPU usage and load, temperatures, network, uptime |
 | `getTimezone` | – | agent | IANA name, e.g. `Europe/Madrid` |
 | `reboot` | – | agent | reboots one second later |
@@ -95,25 +97,26 @@ Between the kiosk shell and `castmill-agent`, local only: `/run/castmill-agent/p
 |---|---|
 | shell → agent | `{"type":"hello","output":"HDMI-A-1"}` |
 | shell → agent | `{"type":"frame","output":"HDMI-A-1"}`: frame-rendered heartbeat (health check, watchdog) |
-| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `hardware_info` (`{cpu, memory}`), `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
+| shell → agent | `{"type":"call","id":"7","method":"telemetry"}`. Methods: `machine_id`, `device_info`, `hardware_info` (`{cpu, memory}`), `set_os_update`, `os_update_status`, `telemetry`, `timezone`, `reboot`, `set_timers` (`args: {"timers": "<TIMERS setting>"}`), `gpu_report` (`args: {"rendering": "hardware", "renderer": "…", "video_decode": ["H.264", …], "features": {…}}`, sent once the GPU process is up) |
 | agent → shell | `{"type":"reply","id":"7","ok":true,"data":{…}}` or `{"type":"reply","id":"7","error":"…"}` |
 | agent → shell | `{"type":"state","state":{"player_url","dev_image","os_version","device_name","online","backend_error"}}` |
 | agent → shell | `{"type":"reload"}`: no frames for 30 s (recovery layer 1, spec 05) |
 
 ## OS updates
 
-The A/B update machinery is complete on the device: RAUC, maintenance windows, the health check and rollback. Until the Castmill backend can tell a device which OS version to run, an update is requested locally:
+Castmill decides which Castmill OS version each device runs ([ADR-0010](adr/0010-os-updates-from-castmill.md)):
+
+- **Releases** are imported from the GitHub releases of Castmill OS: every release has a `manifest.json` with the bundle URL, SHA-256 and size per hardware family (`compatible`).
+- **Target version:** an organization chooses "latest", a fixed version or manual; a device can override it, including "update now". Castmill sends the target to the device app on the device channel (`os_update`), and the device app passes it to the agent (`setOsUpdate`).
+- **On the device** nothing changes: the agent downloads and installs the bundle into the inactive slot, activates it in the maintenance window (right away for "update now" and security releases), and `castmill-health` commits it or rolls it back. The agent refuses versions older than the running one unless they come from a device override.
+- **Status:** the device app reads `getOsUpdateStatus` and reports changes to Castmill (`os_update:report`), which shows them on the device page.
+
+Without Castmill support (or for development), request an update on the device:
 
 ```sh
 castmill-agent update https://example.com/castmill-os-bundle-genericarm64.raucb 0.2.0 [--now]
 castmill-agent status
 ```
-
-**Planned Castmill support** (follow-up to the `CastmillOSMachine` change):
-- an OS release registry, with a manifest per release (version, compatible, bundle URL, security flag);
-- a desired OS version per device or group, with channels and staged rollouts (spec 03);
-- update status reported over the existing device channel, authenticated with the existing device token;
-- `update_firmware` mapped to "check for an OS update now".
 
 ## Developing against a local Castmill
 

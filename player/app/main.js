@@ -308,7 +308,7 @@ app.whenReady().then(() => {
   if (process.env.CASTMILL_PROXY_CA) log('note: custom proxy CA is not yet imported into Chromium (TODO)');
   bridge = new MachineBridge({
     dir: app.getPath('userData'),
-    agentCall: (method) => agent.call(method),
+    agentCall: (method, args) => agent.call(method, args),
     versions: process.versions,
     restart: restartPlayer,
     clearCache: () => session.defaultSession.clearCache(),

@@ -25,6 +25,8 @@ const METHODS = new Set([
   'getTimezone',
   'getDeviceInfo',
   'getHardwareInfo',
+  'setOsUpdate',
+  'getOsUpdateStatus',
   'getTelemetry',
   'reboot',
   'restart',
@@ -51,7 +53,7 @@ class MachineBridge {
   /**
    * @param {object} o
    * @param {string} o.dir          storage directory (this output's profile)
-   * @param {(method: string) => Promise<unknown>} o.agentCall  castmill-agent call
+   * @param {(method: string, args?: object) => Promise<unknown>} o.agentCall  castmill-agent call
    * @param {Record<string,string>} o.versions  process.versions
    * @param {() => void} o.restart  restart this player
    * @param {() => Promise<void>} o.clearCache  clear the browser's HTTP cache
@@ -147,6 +149,18 @@ class MachineBridge {
         ]);
         return hardwareInfo({ ...os, ...shell });
       }
+      // OS updates from Castmill (ADR-0010): the target version Castmill sent
+      // on the device channel, and the agent's progress for the dashboard.
+      case 'setOsUpdate': {
+        const [target] = args;
+        if (target === null || typeof target !== 'object' || Array.isArray(target)) {
+          throw new Error('OS update target must be an object');
+        }
+        await this.agentCall('set_os_update', target);
+        return null;
+      }
+      case 'getOsUpdateStatus':
+        return this.agentCall('os_update_status');
       case 'restart':
         setImmediate(this.restartFn);
         return null;

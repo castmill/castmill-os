@@ -220,6 +220,10 @@ func (a *Agent) call(ctx context.Context, output, method string, args json.RawMe
 		return nil, a.setTimers(output, args)
 	case "gpu_report":
 		return nil, a.gpuReport(output, args)
+	case "set_os_update":
+		return nil, a.setOSUpdate(output, args)
+	case "os_update_status":
+		return a.osUpdateStatus(), nil
 	case "machine_id":
 		// One Castmill device per output: independent content per screen (MED-005).
 		return a.machineID + "-" + output, nil

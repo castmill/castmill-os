@@ -31,3 +31,4 @@ node_modules/
 # Documentation site build output (docs/)
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
+__pycache__/

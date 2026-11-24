@@ -120,3 +120,26 @@ test('hardware info: partial when the agent or the GPU probe fails', async () =>
   const { b: noShell } = bridge({ agentCall: async () => ({ memory: '4 GB' }) });
   assert.deepStrictEqual(await noShell.handle('getHardwareInfo'), { memory: '4 GB' });
 });
+
+test('OS updates: target to the agent, status back', async () => {
+  const sent = [];
+  const { b } = bridge({
+    agentCall: async (m, args) => {
+      sent.push([m, args]);
+      return m === 'os_update_status' ? { state: 'installing', progress: 40, current_version: '0.2.0' } : null;
+    },
+  });
+  const target = { version: '0.3.0', url: 'https://example.com/b.raucb', activate: 'window' };
+  assert.strictEqual(await b.handle('setOsUpdate', [target]), null);
+  assert.deepStrictEqual(await b.handle('getOsUpdateStatus'), {
+    state: 'installing',
+    progress: 40,
+    current_version: '0.2.0',
+  });
+  assert.deepStrictEqual(sent, [
+    ['set_os_update', target],
+    ['os_update_status', undefined],
+  ]);
+  await assert.rejects(b.handle('setOsUpdate', ['0.3.0']), /object/);
+  await assert.rejects(b.handle('setOsUpdate', []), /object/);
+});

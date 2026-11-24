@@ -1,6 +1,6 @@
 # ADR-0005: Update rollout engine in the Castmill backend
 
-- Status: Proposed (open: native vs existing service)
+- Status: Accepted (option A; first stage in [ADR-0010](0010-os-updates-from-castmill.md))
 - Date: 2026-11-22
 
 ## Context
