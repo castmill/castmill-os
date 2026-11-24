@@ -31,7 +31,12 @@ const METHODS = new Set([
   'reboot',
   'restart',
   'clearCache',
+  'getWifiStatus',
+  'connectWifi',
 ]);
+
+/** Joining a network takes up to 25 s in the agent. */
+const WIFI_CONNECT_TIMEOUT_MS = 35_000;
 
 function writeAtomic(file, data, mode) {
   const tmp = `${file}.tmp-${process.pid}`;
@@ -53,7 +58,7 @@ class MachineBridge {
   /**
    * @param {object} o
    * @param {string} o.dir          storage directory (this output's profile)
-   * @param {(method: string, args?: object) => Promise<unknown>} o.agentCall  castmill-agent call
+   * @param {(method: string, args?: object, timeoutMs?: number) => Promise<unknown>} o.agentCall  castmill-agent call
    * @param {Record<string,string>} o.versions  process.versions
    * @param {() => void} o.restart  restart this player
    * @param {() => Promise<void>} o.clearCache  clear the browser's HTTP cache
@@ -161,6 +166,20 @@ class MachineBridge {
       }
       case 'getOsUpdateStatus':
         return this.agentCall('os_update_status');
+      // Wi-Fi from the device app's menu, for a device playing from its cache
+      // while offline. The agent only changes the network while offline.
+      case 'getWifiStatus':
+        return this.agentCall('wifi_status');
+      case 'connectWifi': {
+        const [ssid, psk, hidden] = args;
+        if (typeof ssid !== 'string' || ssid.length === 0 || ssid.length > 32) {
+          throw new Error('ssid must be a string of 1 to 32 characters');
+        }
+        if (typeof psk !== 'string' || psk.length > 64) throw new Error('psk must be a string up to 64 characters');
+        if (hidden !== undefined && typeof hidden !== 'boolean') throw new Error('hidden must be a boolean');
+        await this.agentCall('wifi_connect', { ssid, psk, hidden: !!hidden }, WIFI_CONNECT_TIMEOUT_MS);
+        return null;
+      }
       case 'restart':
         setImmediate(this.restartFn);
         return null;

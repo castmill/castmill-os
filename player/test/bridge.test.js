@@ -143,3 +143,29 @@ test('OS updates: target to the agent, status back', async () => {
   await assert.rejects(b.handle('setOsUpdate', ['0.3.0']), /object/);
   await assert.rejects(b.handle('setOsUpdate', []), /object/);
 });
+
+test('Wi-Fi: status and join through the agent, checked arguments', async () => {
+  const sent = [];
+  const { b } = bridge({
+    agentCall: async (m, args, timeoutMs) => {
+      sent.push([m, args, timeoutMs]);
+      return m === 'wifi_status' ? { available: true, online: false, networks: [{ ssid: 'Venue', signal: 80 }] } : null;
+    },
+  });
+  assert.deepStrictEqual(await b.handle('getWifiStatus'), {
+    available: true,
+    online: false,
+    networks: [{ ssid: 'Venue', signal: 80 }],
+  });
+  assert.strictEqual(await b.handle('connectWifi', ['Venue', 'password123']), null);
+  assert.strictEqual(await b.handle('connectWifi', ['Hidden', '', true]), null);
+  assert.deepStrictEqual(sent, [
+    ['wifi_status', undefined, undefined],
+    ['wifi_connect', { ssid: 'Venue', psk: 'password123', hidden: false }, 35_000],
+    ['wifi_connect', { ssid: 'Hidden', psk: '', hidden: true }, 35_000],
+  ]);
+  await assert.rejects(b.handle('connectWifi', ['', 'password123']), /ssid/);
+  await assert.rejects(b.handle('connectWifi', ['x'.repeat(33), 'password123']), /ssid/);
+  await assert.rejects(b.handle('connectWifi', ['Venue', 12345678]), /psk/);
+  await assert.rejects(b.handle('connectWifi', ['Venue', 'password123', 'yes']), /hidden/);
+});
