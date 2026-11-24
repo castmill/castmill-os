@@ -14,11 +14,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/castmill/castmill-os/agent/internal/wifi"
 )
 
 // DefaultPath is where the image installs the agent configuration.
@@ -140,8 +141,6 @@ type Provisioning struct {
 	WiFiCountry  string `json:"wifi_country,omitempty"`
 }
 
-var countryCode = regexp.MustCompile(`^[A-Z]{2}$`)
-
 // LoadProvisioning reads provisioning.json; missing file returns an empty value.
 func LoadProvisioning(path string) (*Provisioning, error) {
 	p := &Provisioning{}
@@ -204,8 +203,8 @@ func ParseCastmillConf(path string) (*CastmillConf, error) {
 	}
 	if cc := c.Network.WiFiCountry; cc != "" {
 		c.Network.WiFiCountry = strings.ToUpper(cc)
-		if !countryCode.MatchString(c.Network.WiFiCountry) {
-			return nil, fmt.Errorf("%s: [network] wifi_country must be a two-letter country code, like \"SE\"", path)
+		if !wifi.ValidCountry(c.Network.WiFiCountry) {
+			return nil, fmt.Errorf("%s: [network] wifi_country %q is not a country code (ISO 3166), like \"SE\"", path, cc)
 		}
 	}
 	return c, nil

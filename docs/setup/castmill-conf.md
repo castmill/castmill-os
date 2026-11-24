@@ -54,9 +54,9 @@ The device creates a NetworkManager connection that's tried automatically. Ether
 
 #### Wi-Fi country
 
-Key `wifi_country` in section `[network]`: the two-letter code of the country the device is in, like `"SE"` or `"ES"`. Wi-Fi channels and power limits differ by country. Without one, Wi-Fi follows the strictest worldwide rules, and networks on some channels (for example 2.4 GHz channels 12 and 13, common in Europe) show up late or not at all.
+Key `wifi_country` in section `[network]`: the two-letter code (ISO 3166) of the country the device is in, like `"SE"` or `"ES"`. A code that isn't a country is rejected, like other mistakes in the file. Wi-Fi channels and power limits differ by country. Without one, Wi-Fi follows the strictest worldwide rules, and networks on some channels (for example 2.4 GHz channels 12 and 13, common in Europe) show up late or not at all.
 
-You rarely need it: by default the device uses the country of its time zone (from `[time]` or from Castmill), applied at the next boot. Set it when the time zone doesn't match the country, or when the device should get it right before its first connection.
+You rarely need it: by default the device uses the country of its time zone (from `[time]` or from Castmill, aliases like `US/Eastern` included), applied at the next boot. A time zone without a country, like `UTC`, gives the worldwide rules. Set it when the time zone doesn't match the country, or when the device should get it right before its first connection.
 
 ### Proxy
 

@@ -25,6 +25,21 @@ func TestCountryForZone(t *testing.T) {
 			t.Errorf("CountryForZone(%q) = %q, want %q", zone, got, want)
 		}
 	}
+	// Aliases resolve through tzdata.zi, next to zone.tab.
+	links := "L Europe/Stockholm Europe/Alias\nL Europe/Alias Europe/Alias2\nL Etc/UTC UTC\n"
+	if err := os.WriteFile(filepath.Join(filepath.Dir(tab), "tzdata.zi"), []byte(links), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for zone, want := range map[string]string{
+		"Europe/Alias":  "SE",
+		"Europe/Alias2": "SE",
+		"UTC":           "",
+		"Nowhere/Zone":  "",
+	} {
+		if got := CountryForZone(tab, zone); got != want {
+			t.Errorf("CountryForZone(%q) = %q, want %q", zone, got, want)
+		}
+	}
 	if got := CountryForZone(filepath.Join(t.TempDir(), "missing"), "Europe/Stockholm"); got != "" {
 		t.Errorf("missing zone.tab: %q", got)
 	}
@@ -37,7 +52,12 @@ func TestModprobeConf(t *testing.T) {
 	if got := ModprobeConf(""); strings.Contains(got, "options") {
 		t.Errorf("ModprobeConf() = %q", got)
 	}
-	if ValidCountry("se") || ValidCountry("SWE") || !ValidCountry("SE") {
-		t.Error("ValidCountry")
+	for cc, want := range map[string]bool{"SE": true, "US": true, "se": false, "SWE": false, "ZZ": false, "00": false} {
+		if ValidCountry(cc) != want {
+			t.Errorf("ValidCountry(%q) = %v", cc, !want)
+		}
+	}
+	if err := SetCountry("ZZ"); err == nil {
+		t.Error("SetCountry(ZZ) accepted")
 	}
 }

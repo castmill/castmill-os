@@ -191,9 +191,57 @@ func TestWiFiCountry(t *testing.T) {
 		t.Fatalf("country %q, modprobe.d %q", cc, modprobe(p))
 	}
 
-	// Not a country code.
-	p, _ = setup(t, "[network]\nwifi_country = \"SWE\"\n")
-	if _, err := Apply(p, false, quiet); err == nil || !strings.Contains(err.Error(), "wifi_country") {
-		t.Fatalf("err = %v", err)
+	// Not a country code, or not an assigned one.
+	for _, cc := range []string{"SWE", "ZZ"} {
+		p, _ = setup(t, "[network]\nwifi_country = \""+cc+"\"\n")
+		if _, err := Apply(p, false, quiet); err == nil || !strings.Contains(err.Error(), "wifi_country") {
+			t.Fatalf("%s: err = %v", cc, err)
+		}
+	}
+
+	// A time zone alias (US/Eastern links to America/New_York).
+	p, _ = setup(t, "[time]\ntimezone = \"US/Eastern\"\n")
+	os.MkdirAll(filepath.Join(p.ZoneinfoDir, "US"), 0o755)
+	os.WriteFile(filepath.Join(p.ZoneinfoDir, "US/Eastern"), []byte("TZif"), 0o644)
+	os.WriteFile(filepath.Join(p.ZoneinfoDir, "zone.tab"),
+		[]byte("US\t+404251-0740023\tAmerica/New_York\tEastern (most areas)\n"), 0o644)
+	os.WriteFile(filepath.Join(p.ZoneinfoDir, "tzdata.zi"), []byte("L America/New_York US/Eastern\n"), 0o644)
+	if _, err := Apply(p, false, quiet); err != nil {
+		t.Fatal(err)
+	}
+	if cc := ApplyWiFiCountry(p, filepath.Join(p.ConfigDir, "wifi-country.conf"), quiet); cc != "US" {
+		t.Fatalf("country %q", cc)
+	}
+}
+
+// A Wi-Fi stack that is already loaded gets the country, and goes back to
+// the worldwide rules when the device no longer has one.
+func TestWiFiCountryLoadedStack(t *testing.T) {
+	var set []string
+	loaded, setter := wifiLoaded, setWiFiCountry
+	t.Cleanup(func() { wifiLoaded, setWiFiCountry = loaded, setter })
+	wifiLoaded = func() bool { return true }
+	setWiFiCountry = func(cc string) error { set = append(set, cc); return nil }
+
+	p, _ := setup(t, "[time]\ntimezone = \"Europe/Madrid\"\n")
+	os.WriteFile(filepath.Join(p.ZoneinfoDir, "zone.tab"),
+		[]byte("ES\t+4024-00341\tEurope/Madrid\tSpain (mainland)\n"), 0o644)
+	if _, err := Apply(p, false, quiet); err != nil {
+		t.Fatal(err)
+	}
+	conf := filepath.Join(p.ConfigDir, "wifi-country.conf")
+	ApplyWiFiCountry(p, conf, quiet)
+
+	// Re-provisioned to UTC: no country.
+	os.MkdirAll(filepath.Join(p.ZoneinfoDir, "Etc"), 0o755)
+	os.WriteFile(filepath.Join(p.ZoneinfoDir, "Etc/UTC"), []byte("TZif"), 0o644)
+	if err := SetTimezone(p.ZoneinfoDir, p.Localtime, "Etc/UTC"); err != nil {
+		t.Fatal(err)
+	}
+	if cc := ApplyWiFiCountry(p, conf, quiet); cc != "" {
+		t.Fatalf("country %q", cc)
+	}
+	if strings.Join(set, ",") != "ES,00" {
+		t.Fatalf("set %v, want ES then 00", set)
 	}
 }

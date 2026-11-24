@@ -231,6 +231,15 @@ func WiFiCountry(configDir, localtime, zoneTab string) string {
 	return wifi.CountryForZone(zoneTab, zone)
 }
 
+// The running Wi-Fi stack (replaced in tests).
+var (
+	wifiLoaded = func() bool {
+		_, err := os.Stat("/sys/module/cfg80211")
+		return err == nil
+	}
+	setWiFiCountry = wifi.SetCountry
+)
+
 // ApplyWiFiCountry writes the cfg80211 module option (for a Wi-Fi stack that
 // loads later; /etc/modprobe.d links to it) and sets the country of one
 // that's already loaded. Returns the country ("" for none).
@@ -239,11 +248,14 @@ func ApplyWiFiCountry(p Paths, modprobeConf string, log *slog.Logger) string {
 	if err := config.WriteFileAtomic(modprobeConf, []byte(wifi.ModprobeConf(cc)), 0o644); err != nil {
 		log.Warn("Wi-Fi country module option", "err", err)
 	}
-	if cc == "" {
-		return ""
-	}
-	if _, err := os.Stat("/sys/module/cfg80211"); err == nil {
-		if err := wifi.SetCountry(cc); err != nil {
+	if wifiLoaded() {
+		// Without a country (a time zone like UTC), a loaded stack goes back
+		// to the worldwide rules instead of keeping the previous country's.
+		set := cc
+		if set == "" {
+			set = wifi.WorldCountry
+		}
+		if err := setWiFiCountry(set); err != nil {
 			log.Warn("Wi-Fi country", "err", err)
 		}
 	}

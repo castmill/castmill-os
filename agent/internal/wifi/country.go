@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,18 +14,65 @@ import (
 // scanned passively, so networks on them show up late or not at all. The
 // country comes from castmill.conf, else from the device's time zone.
 
-var countryCode = regexp.MustCompile(`^[A-Z]{2}$`)
+// WorldCountry is the kernel's worldwide regulatory domain, for a device
+// without a country.
+const WorldCountry = "00"
 
-// ValidCountry reports whether cc is an ISO 3166-1 alpha-2 code (uppercase).
-func ValidCountry(cc string) bool { return countryCode.MatchString(cc) }
+// The ISO 3166-1 alpha-2 codes, as tzdata's iso3166.tab lists them.
+var countries = map[string]bool{}
+
+func init() {
+	for _, cc := range strings.Fields(`
+	AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG
+	BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI
+	CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH
+	ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ
+	GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT
+	JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS
+	LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU
+	MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG
+	PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG
+	SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK
+	TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU
+	WF WS YE YT ZA ZM ZW
+`) {
+		countries[cc] = true
+	}
+}
+
+// ValidCountry reports whether cc is an ISO 3166-1 country code (uppercase).
+func ValidCountry(cc string) bool { return countries[cc] }
 
 // CountryForZone returns the country of an IANA time zone from tzdata's
 // zone.tab ("SE\t+5920+01803\tEurope/Stockholm"), or "" when it has none
-// (UTC, Etc/...) or zone.tab can't be read.
+// (UTC, Etc/...) or zone.tab can't be read. Aliases (US/Eastern) resolve
+// through the links in tzdata.zi, next to zone.tab.
 func CountryForZone(zoneTab, zone string) string {
-	f, err := os.Open(zoneTab)
+	byZone := readZoneTab(zoneTab)
+	if cc := byZone[zone]; cc != "" {
+		return cc
+	}
+	links := readLinks(filepath.Join(filepath.Dir(zoneTab), "tzdata.zi"))
+	// Links point at zones, but follow a few hops in case one doesn't.
+	for i := 0; i < 4; i++ {
+		target, ok := links[zone]
+		if !ok {
+			return ""
+		}
+		zone = target
+		if cc := byZone[zone]; cc != "" {
+			return cc
+		}
+	}
+	return ""
+}
+
+// readZoneTab maps each zone of zone.tab to its country.
+func readZoneTab(path string) map[string]string {
+	byZone := map[string]string{}
+	f, err := os.Open(path)
 	if err != nil {
-		return ""
+		return byZone
 	}
 	defer f.Close()
 	sc := bufio.NewScanner(f)
@@ -35,11 +82,29 @@ func CountryForZone(zoneTab, zone string) string {
 			continue
 		}
 		fields := strings.Split(line, "\t")
-		if len(fields) >= 3 && fields[2] == zone && ValidCountry(fields[0]) {
-			return fields[0]
+		if len(fields) >= 3 && ValidCountry(fields[0]) {
+			byZone[fields[2]] = fields[0]
 		}
 	}
-	return ""
+	return byZone
+}
+
+// readLinks maps each alias of tzdata.zi ("L America/New_York US/Eastern")
+// to its target.
+func readLinks(path string) map[string]string {
+	links := map[string]string{}
+	f, err := os.Open(path)
+	if err != nil {
+		return links
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		if fields := strings.Fields(sc.Text()); len(fields) == 3 && fields[0] == "L" {
+			links[fields[2]] = fields[1]
+		}
+	}
+	return links
 }
 
 // ModprobeConf is the cfg80211 option that sets the country when the Wi-Fi
@@ -53,10 +118,10 @@ func ModprobeConf(cc string) string {
 }
 
 // SetCountry sets the country of a Wi-Fi stack that is already loaded
-// (iw reg set). It fails when cfg80211 isn't loaded yet; ModprobeConf covers
-// that case.
+// (iw reg set), or WorldCountry for the worldwide rules. It fails when
+// cfg80211 isn't loaded yet; ModprobeConf covers that case.
 func SetCountry(cc string) error {
-	if !ValidCountry(cc) {
+	if cc != WorldCountry && !ValidCountry(cc) {
 		return fmt.Errorf("invalid Wi-Fi country %q", cc)
 	}
 	out, err := exec.Command("iw", "reg", "set", cc).CombinedOutput()
