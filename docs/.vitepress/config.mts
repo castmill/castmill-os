@@ -128,6 +128,7 @@ const guideSidebar: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Development guide', link: '/development' },
       { text: 'Testing a release', link: '/testing' },
+      { text: 'Release signing', link: '/release-signing' },
       { text: 'Contributing', link: `${REPO}/blob/main/CONTRIBUTING.md` },
     ],
   },

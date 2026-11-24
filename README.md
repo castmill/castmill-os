@@ -74,7 +74,7 @@ See [Hardware support](docs/specs/09-hardware-support.md).
 - **Display:** Weston kiosk-shell; one Electron process per output, pinned to it by Wayland app ID. Hotplug, per-output mode and rotation from Castmill.
 - **Provisioning:** `castmill.conf` on the boot partition for Wi-Fi, proxy, NTP and time zone.
 - **Versions:** [SemVer](https://semver.org/) (`vX.Y.Z` tags); commits follow [Conventional Commits](https://www.conventionalcommits.org/) ([CONTRIBUTING](CONTRIBUTING.md#commit-messages)).
-- **CI/CD:** GitHub Actions: checks on every pull request, image builds for every push to `main`, and a development-signed pre-release for every version tag. Standard GitHub-hosted runners for now; larger runners, QEMU and hardware-lab tests and production signing come later ([spec 10](docs/specs/10-build-release-testing.md)).
+- **CI/CD:** GitHub Actions: checks on every pull request, image builds for every push to `main`, and a pre-release for every version tag, whose bundles are re-signed with the production key after a maintainer approves. Standard GitHub-hosted runners for now; larger runners, QEMU and hardware-lab tests and production signing come later ([spec 10](docs/specs/10-build-release-testing.md)).
 
 ## Quick start (development)
 

@@ -85,8 +85,9 @@ Authentication: device mutual-TLS certificate (SEC-005). Alternatively, implemen
 ## Signing and keys
 
 - Separate keys for **development** and **production** bundles. Production devices reject development bundles.
-- Production signing keys are kept in an HSM or a dedicated offline signing service, never on CI runners.
-- The keyring supports **key rotation**: devices trust the current key and the next one.
+- **Production:** an offline root CA (its encrypted key in two maintainers' password managers) approves a signing key valid for 2 years. Release images trust only the root certificate. Bundles are re-signed with the production key in a separate job of `release.yml` that runs in the protected `production-signing` environment after a maintainer's approval, and never runs build code. See [Release signing](../release-signing.md).
+- Later: the signing key in a cloud KMS/HSM, so even the signing job never holds it.
+- **Rotation:** devices trust the root CA, so a new signing key needs no device update; a new root CA is shipped in a release signed with the current key.
 
 ## Open questions
 

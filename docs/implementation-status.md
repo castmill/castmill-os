@@ -11,7 +11,7 @@ What exists for each requirement in [spec 01](specs/01-vision-and-requirements.m
 | ID | Status | Where | Verified |
 |---|---|---|---|
 | SEC-001 | Read-only ext4 rootfs (`read-only-rootfs`). **dm-verity not yet** (kernel options enabled; needs an initramfs or UKI that sets up verity). The spec asks for erofs/squashfs; ext4 is used until verity lands. | `castmill-os-image.bb` | parsed |
-| SEC-002 | RAUC verity bundles signed with X.509. Dev keys outside the repo; the device keyring comes from `CASTMILL_KEYS_DIR`. | `castmill-os-bundle.bb`, `rauc-conf.bbappend`, `scripts/gen-dev-keys.sh` | parsed |
+| SEC-002 | RAUC verity bundles signed with X.509. Release images trust only the production root CA; release bundles are re-signed with the production key in a protected, approval-gated job ([Release signing](release-signing.md)). Development keys sign everything else; all keys outside the repo. Production keys still to be created by the maintainers. | `castmill-os-bundle.bb`, `rauc-conf.bbappend`, `scripts/gen-dev-keys.sh` | parsed |
 | SEC-003 | – (Phase 2: Secure Boot + UKI; Pi signed boot) | | |
 | SEC-004 | nftables: drop all inbound except established/related, ICMP errors, IPv6 ND, DHCPv6. SSH only on dev images. | `castmill.nft`, `castmill-dev` | parsed |
 | SEC-005 | **Revised by [ADR-0008](adr/0008-reuse-castmill-device-stack.md):** devices use Castmill's device token from pincode pairing (no per-device certificates or mTLS). Device ID: random, kept on `/data`, new after a factory reset. | Castmill device app, `agent/internal/agent` | tested (ID) |

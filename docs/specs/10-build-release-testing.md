@@ -61,7 +61,7 @@ The repository is public and open to outside contributions, so untrusted code mu
 | `build.yml` ✅ | push to `main`/`release/*`, internal PRs, manual, called by `release.yml` | larger runners (standard for now) | kas build per target (`x86-64`, `rpi5`, `vm-arm64` dev image); images, RAUC bundles + SBOM uploaded as workflow artifacts. Runs on standard runners (x86-64 and arm64) until the larger runners exist (repository variable `CASTMILL_LARGER_RUNNERS=true`); a cold build may need two runs, since the shared-state cache is saved even when a run hits the time limit. |
 | `qemu-test.yml` | after `build.yml` | larger runners (KVM) | Boot the x86-64 image in QEMU: health check, A/B update, forced rollback, power-cut simulation |
 | `nightly.yml` | schedule (daily) | larger runners (static IP for the lab) | Full build from `main` → `nightly` channel → hardware lab suites |
-| `release.yml` ✅ (initial) | tag `vX.Y.Z[-rc.N]` | larger runners → standard | Builds all targets and publishes a **development-signed GitHub pre-release** (images, bundles, SBOMs, `SHA256SUMS`). The full pipeline below (test gates, production signing, attestations, manifest registration) replaces it before v1.0. |
+| `release.yml` ✅ (initial) | tag `vX.Y.Z[-rc.N]` | larger runners → standard | Builds all targets with images that trust only the production root CA, re-signs the bundles with the production key in the protected `sign` job, and publishes a GitHub pre-release (images, bundles, `manifest.json`, SBOMs, `SHA256SUMS`). Test gates and attestations come before v1.0. |
 | `cve-watch.yml` | schedule (daily) | GitHub-hosted | Compares the latest release's SBOM against new CVEs; opens an issue if critical |
 | `bump-deps.yml` | schedule (weekly) | GitHub-hosted | Opens PRs for new Yocto layer revisions and Electron releases (Dependabot handles action versions) |
 
@@ -102,9 +102,9 @@ Security releases (`PATCH` bumps from `release/*`) can go straight to `stable` w
 
 ## Signing
 
-- CI never holds production keys. Signing runs in the protected `production-signing` environment and uses an HSM/KMS through OIDC.
-- Development keys (also kept outside the repo) sign `nightly` and dev images only. Production devices reject them.
-- Key rotation: devices trust the current key and the next one (see [03](03-updates.md)).
+- The production root CA is offline (its encrypted key in two maintainers' password managers). Its signing key is in the protected `production-signing` environment and only the `sign` job of `release.yml` reads it, after a maintainer's approval; that job runs no build code. Later: the signing key in an HSM/KMS through OIDC. See [Release signing](../release-signing.md).
+- Development keys (also kept outside the repo) sign pushes, pull requests and dev images. Production devices reject them.
+- Key rotation: devices trust the root CA, so a new signing key needs no device update (see [03](03-updates.md)).
 
 ## Testing
 

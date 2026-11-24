@@ -38,7 +38,7 @@ Goal: lower the main technical risks before committing to the full architecture.
 - [x] x86 USB installer (to verify on a real PC)
 - [ ] Pi images + Imager entry, `castmill.conf` bulk provisioning
 - [ ] `build.yml` + `qemu-test.yml` + `nightly.yml`; first hardware lab with self-hosted lab runners
-- [ ] `release.yml` with protected signing environment, GitHub Releases, provenance attestations and Castmill manifest registration
+- [ ] `release.yml` with protected signing environment (done: [Release signing](../release-signing.md); keys to create), GitHub Releases (done), Castmill manifest (done: `manifest.json`), provenance attestations
 - [ ] Pilot with internal and friendly-customer screens
 
 ## Phase 2: Hardening (≈ 3 months)

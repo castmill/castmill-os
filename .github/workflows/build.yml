@@ -24,6 +24,12 @@ on:
         required: false
         type: string
   workflow_call:
+    inputs:
+      production-keyring:
+        description: "Images trust the production root CA (releases) instead of the development keys"
+        required: false
+        type: boolean
+        default: false
     secrets:
       CASTMILL_DEV_RAUC_KEY:
         required: false
@@ -144,6 +150,19 @@ jobs:
               "(bundles from this run only install on images from this run)."
             scripts/gen-dev-keys.sh "$keys"
           fi
+
+      # Releases: images trust only the production root CA. Bundles are still
+      # signed with the development key here and re-signed with the
+      # production key in release.yml's protected "sign" job.
+      - name: Production keyring
+        if: inputs.production-keyring
+        run: |
+          ring=layers/meta-castmill/files/keys/production-keyring.pem
+          if [ ! -s "$ring" ]; then
+            echo "::error::$ring is missing: create the production keys first (docs/release-signing.md)."
+            exit 1
+          fi
+          cp "$ring" "$RUNNER_TEMP/keys/rauc-keyring.pem"
 
       - name: Build
         id: build
