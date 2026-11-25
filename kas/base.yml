@@ -72,6 +72,9 @@ local_conf_header:
   castmill-base: |
     # DL_DIR and SSTATE_DIR come from the environment (set by CI or by you).
     BB_GENERATE_MIRROR_TARBALLS = "1"
+    # gmplib.org sometimes serves CI runners something other than the
+    # tarball (checksum mismatch); BitBake then tries MIRRORS: GNU's copy.
+    MIRRORS:prepend = "https?://gmplib.org/download/gmp/ https://ftp.gnu.org/gnu/gmp/ "
     BB_HASHSERVE = "auto"
     BB_SIGNATURE_HANDLER = "OEEquivHash"
     # Keep build directories small; CI runners have finite disk.
